@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventMaster | Gestão de Eventos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i data-lucide="calendar-days"></i>
+                <span>EventMaster</span>
+            </div>
+            <nav>
+                <button class="nav-item active" data-view="dashboard">
+                    <i data-lucide="layout-dashboard"></i> Painel
+                </button>
+                <button class="nav-item" data-view="events">
+                    <i data-lucide="calendar-range"></i> Eventos
+                </button>
+                <button class="nav-item" data-view="participants">
+                    <i data-lucide="users"></i> Participantes
+                </button>
+                <button class="nav-item" data-view="reports">
+                    <i data-lucide="bar-chart-3"></i> Relatórios
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <header class="top-bar">
+                <div class="header-left">
+                    <h1 id="view-title">Painel de Controle</h1>
+                    <div id="event-context-badge" class="badge hidden">Evento: <span id="current-event-name"></span>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">G</div>
+                    <span>Admin</span>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <section id="dashboard" class="view">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon indigo"><i data-lucide="users"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Participantes</span>
+                            <h2 id="stat-total-participants">0</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i data-lucide="dollar-sign"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Receita Bruta</span>
+                            <h2 id="stat-total-revenue">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i data-lucide="trending-down"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Gastos</span>
+                            <h2 id="stat-total-expenses">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i data-lucide="wallet"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Lucro Líquido</span>
+                            <h2 id="stat-net-profit">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i data-lucide="clock"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">A Receber</span>
+                            <h2 id="stat-pending-revenue">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i data-lucide="alert-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Pendentes</span>
+                            <h2 id="stat-pending">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-activity card">
+                    <h3>Atividades Recentes</h3>
+                    <div class="table-container">
+                        <table id="recent-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Data Pagamento</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Events View -->
+            <section id="events" class="view hidden">
+                <div class="view-header">
+                    <h2>Gerenciar Eventos</h2>
+                    <button class="btn btn-primary" id="open-event-modal">
+                        <i data-lucide="plus"></i> Novo Evento
+                    </button>
+                </div>
+                <div class="events-grid" id="events-list">
+                    <!-- Events injected by JS -->
+                </div>
+            </section>
+
+            <!-- Participants View -->
+            <section id="participants" class="view hidden">
+                <div class="view-header">
+                    <div id="participant-event-name" style="font-size: 0.9rem; color: var(--text-muted);"></div>
+                    <div class="header-actions">
+                        <input type="file" id="import-csv-input" accept=".csv" class="hidden">
+                        <button class="btn btn-secondary" onclick="document.getElementById('import-csv-input').click()">
+                            <i data-lucide="upload"></i> Importar CSV
+                        </button>
+                        <button class="btn btn-secondary" id="export-participants">
+                            <i data-lucide="download"></i> Exportar CSV
+                        </button>
+                        <button class="btn btn-primary" id="open-register-modal">
+                            <i data-lucide="plus"></i> Novo Participante
+                        </button>
+                    </div>
+                </div>
+
+                <div id="bulk-actions-bar" class="hidden"
+                    style="background: var(--bg-card); padding: 0.5rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between;">
+                    <span id="selection-count" style="font-weight: 500;">0 selecionados</span>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary" id="open-bulk-modal">
+                            <i data-lucide="edit"></i> Editar Selecionados
+                        </button>
+                        <button class="btn btn-secondary" id="bulk-delete-btn"
+                            style="color: var(--error); border-color: var(--error);">
+                            <i data-lucide="trash-2"></i> Excluir Selecionados
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="search-bar">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="search-participants" placeholder="Buscar por nome ou email...">
+                    </div>
+                    <div class="table-container">
+                        <table id="participants-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all-participants"></th>
+                                    <th>Participante</th>
+                                    <th>Contato</th>
+                                    <th>Pagamento</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Confirmação</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports View -->
+            <section id="reports" class="view hidden">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i data-lucide="wallet"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Recebido</span>
+                            <h2 id="report-total-received">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple"><i data-lucide="trending-up"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Previsto</span>
+                            <h2 id="report-total-projected">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon indigo"><i data-lucide="calculator"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Ticket Médio</span>
+                            <h2 id="report-avg-ticket">R$ 0,00</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reports-container">
+                    <div class="card">
+                        <h3>Pagamentos por Método</h3>
+                        <div id="method-stats" class="method-stats-grid">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 1.5rem;">
+                        <div class="card-header-flex">
+                            <h3>Extrato Detalhado de Entradas</h3>
+                            <div class="header-actions">
+                                <button class="btn btn-secondary btn-sm" id="print-report"
+                                    onclick="window.generatePrintableReport()">
+                                    <i data-lucide="printer"></i> Imprimir Relatório Completo
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="export-finance">
+                                    <i data-lucide="file-spreadsheet"></i> Exportar CSV
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table id="financial-extract-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Participante</th>
+                                        <th>Parcela</th>
+                                        <th>Valor Pago</th>
+                                        <th>Método</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modal for Participant Registration -->
+        <div id="modal-container" class="modal-overlay hidden">
+            <div class="modal card">
+                <div class="modal-header">
+                    <h2 id="modal-title">Cadastrar Participante</h2>
+                    <button class="close-modal"><i data-lucide="x"></i></button>
+                </div>
+                <form id="participant-form">
+                    <input type="hidden" id="edit-participant-id">
+                    <div class="form-group">
+                        <label for="reg-event">Evento</label>
+                        <select id="reg-event" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Nome Completo</label>
+                        <input type="text" id="name" required placeholder="Ex: João Silva">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" placeholder="email@exemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Telefone / WhatsApp</label>
+                        <input type="tel" id="phone" placeholder="Ex: 11999999999">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="payment-type">Tipo de Pagamento</label>
+                            <select id="payment-type" required>
+                                <option value="cash">À Vista</option>
+                                <option value="installments">Parcelado</option>
+                            </select>
+                        </div>
+                        <div id="installments-group" class="form-group hidden">
+                            <label for="installments">Parcelas</label>
+                            <input type="number" id="installments" min="2" max="12" value="2">
+                        </div>
+                    </div>
+                    <div id="installments-list-container" class="form-group hidden">
+                        <label>Detalhamento das Parcelas</label>
+                        <div id="installments-list" class="installments-grid">
+                            <!-- Injetado via JS -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Valor Total (R$)</label>
+                        <input type="number" id="price" required step="0.01" value="0.00">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="payment-date">Data de Pagamento</label>
+                            <input type="date" id="payment-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="payment-method">Método de Pagamento</label>
+                            <select id="payment-method">
+                                <option value="">Selecione...</option>
+                                <option value="pix">PIX</option>
+                                <option value="credit">Cartão de Crédito</option>
+                                <option value="debit">Cartão de Débito</option>
+                                <option value="cash">Dinheiro</option>
+                                <option value="transfer">Transferência/Boleto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-obs">Observações Financeiras</label>
+                        <textarea id="payment-obs" rows="2"
+                            placeholder="Detalhes do pagamento, comprovantes, etc."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status do Pagamento</label>
+                        <select id="status" required>
+                            <option value="pending">Pendente</option>
+                            <option value="paid">Pago</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmation">Confirmação (RSVP)</label>
+                        <select id="confirmation" required>
+                            <option value="later">Confirmar Depois</option>
+                            <option value="pending">Pendente</option>
+                            <option value="yes">Sim</option>
+                            <option value="no">Não</option>
+                            <option value="maybe">Talvez</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary close-modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Participante</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal for Event Creation -->
+        <div id="event-modal-container" class="modal-overlay hidden">
+            <div class="modal card">
+                <div class="modal-header">
+                    <h2>Novo Evento</h2>
+                    <button class="close-event-modal"><i data-lucide="x"></i></button>
+                </div>
+                <form id="event-form">
+                    <input type="hidden" id="edit-event-id">
+                    <div class="form-group">
+                        <label for="event-name">Nome do Evento</label>
+                        <input type="text" id="event-name" required placeholder="Ex: Workshop Tech">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event-date">Data</label>
+                            <input type="date" id="event-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-location">Local</label>
+                            <input type="text" id="event-location" required placeholder="Ex: Auditório Principal">
+                        </div>
+                    </div>
+                    <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--border-color);">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event-price">Valor Padrão (R$)</label>
+                            <input type="number" id="event-price" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-due-day">Dia Vencimento</label>
+                            <input type="number" id="event-due-day" min="1" max="31" placeholder="Ex: 10">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-max-installments">Max. Parcelas</label>
+                            <input type="number" id="event-max-installments" min="1" max="24" placeholder="Ex: 12">
+                        </div>
+                    </div>
+
+                    <div id="event-schedule-container"
+                        style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                        <label
+                            style="display:block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Datas
+                            de Vencimento Fixas (Opcional)</label>
+                        <div id="event-schedule-list"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <!-- Inputs gerados via JS -->
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary close-event-modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="event-submit-btn">Criar Evento</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Modal for Expenses -->
+        <div id="expense-modal-container" class="modal-overlay hidden">
+            <div class="modal card">
+                <div class="modal-header">
+                    <h2 id="expense-modal-title">Novo Gasto</h2>
+                    <button class="close-expense-modal"><i data-lucide="x"></i></button>
+                </div>
+                <form id="expense-form">
+                    <input type="hidden" id="edit-expense-id">
+                    <div class="form-group">
+                        <label for="expense-desc">Descrição</label>
+                        <input type="text" id="expense-desc" required placeholder="Ex: Aluguel do Salão">
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-amount">Valor Total (R$)</label>
+                        <input type="number" id="expense-amount" required step="0.01" value="0.00">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expense-date">Data</label>
+                            <input type="date" id="expense-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expense-payment-type">Pagamento</label>
+                            <select id="expense-payment-type" required>
+                                <option value="cash">À Vista</option>
+                                <option value="installments">Parcelado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="expense-installments-group" class="form-group hidden">
+                        <label for="expense-installments">Número de Parcelas</label>
+                        <input type="number" id="expense-installments" min="2" max="12" value="2">
+                    </div>
+                    <div id="expense-installments-list-container" class="form-group hidden">
+                        <label>Detalhamento das Parcelas</label>
+                        <div id="expense-installments-list" class="installments-grid">
+                            <!-- Injetado via JS -->
+                        </div>
+                    </div>
+                    <div class="form-group hidden" id="expense-status-group">
+                        <label for="expense-status">Status</label>
+                        <select id="expense-status">
+                            <option value="pending">Pendente</option>
+                            <option value="paid">Pago</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary close-expense-modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Despesa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Modal for Bulk Edit -->
+        <div id="bulk-edit-modal-container" class="modal-overlay hidden">
+            <div class="modal card">
+                <div class="modal-header">
+                    <h2>Editar Selecionados</h2>
+                    <button class="close-bulk-modal"><i data-lucide="x"></i></button>
+                </div>
+                <form id="bulk-edit-form">
+                    <p id="bulk-count-msg" style="margin-bottom: 1rem; color: var(--text-muted);">Editando X
+                        participantes</p>
+
+                    <div class="form-group"
+                        style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius); margin-bottom: 1rem;">
+                        <label class="switch-mini" style="margin-bottom: 0;">
+                            <input type="checkbox" id="bulk-apply-installments">
+                            <span class="slider-mini"></span>
+                            <span style="margin-left: 0.5rem; font-weight: 500;">Aplicar Parcelamento Padrão do
+                                Evento</span>
+                        </label>
+                        <p
+                            style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; margin-left: 2.5rem;">
+                            Substitui o plano atual pelo valor e datas configurados no evento.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="switch-mini">
+                            <input type="checkbox" id="bulk-update-status-check">
+                            <span class="slider-mini"></span>
+                            <span style="margin-left: 0.5rem;">Atualizar Status</span>
+                        </label>
+                        <select id="bulk-status" class="hidden" style="margin-top: 0.5rem;">
+                            <option value="pending">Pendente</option>
+                            <option value="paid">Pago</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="switch-mini">
+                            <input type="checkbox" id="bulk-update-date-check">
+                            <span class="slider-mini"></span>
+                            <span style="margin-left: 0.5rem;">Definir Data de Pagamento</span>
+                        </label>
+                        <input type="date" id="bulk-payment-date" class="hidden" style="margin-top: 0.5rem;">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="switch-mini">
+                            <input type="checkbox" id="bulk-update-method-check">
+                            <span class="slider-mini"></span>
+                            <span style="margin-left: 0.5rem;">Definir Forma de Pagamento</span>
+                        </label>
+                        <select id="bulk-payment-method" class="hidden" style="margin-top: 0.5rem;">
+                            <option value="Pix">Pix</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartão Crédito">Cartão Crédito</option>
+                            <option value="Cartão Débito">Cartão Débito</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="switch-mini">
+                            <input type="checkbox" id="bulk-update-confirmation-check">
+                            <span class="slider-mini"></span>
+                            <span style="margin-left: 0.5rem;">Atualizar Confirmação</span>
+                        </label>
+                        <select id="bulk-confirmation" class="hidden" style="margin-top: 0.5rem;">
+                            <option value="later">Confirmar Depois</option>
+                            <option value="pending">Pendente</option>
+                            <option value="yes">Sim</option>
+                            <option value="no">Não</option>
+                            <option value="maybe">Talvez</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group"
+                        style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius); margin-bottom: 1rem;">
+                        <label class="switch-mini" style="margin-bottom: 0;">
+                            <input type="checkbox" id="bulk-pay-installment-check">
+                            <span class="slider-mini"></span>
+                            <span style="margin-left: 0.5rem; font-weight: 500;">Baixar Parcela Específica</span>
+                        </label>
+                        <div id="bulk-installment-inputs" class="hidden"
+                            style="margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div>
+                                <label style="font-size:0.8rem">Nº Parcela</label>
+                                <input type="number" id="bulk-installment-number" min="1" placeholder="Ex: 1">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem">Data Pagamento</label>
+                                <input type="date" id="bulk-installment-date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary close-bulk-modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Aplicar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
