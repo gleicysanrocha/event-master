@@ -1,10 +1,113 @@
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyCK_iUPG-yGOvWr0fn71RH6lirmRU8bLBk",
+  authDomain: "eventmaster-8d2c2.firebaseapp.com",
+  projectId: "eventmaster-8d2c2",
+  storageBucket: "eventmaster-8d2c2.firebasestorage.app",
+  messagingSenderId: "50578141487",
+  appId: "1:50578141487:web:0e13e99748f7e71ccd31da"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 // Gerenciamento de Estado da App
-let events = JSON.parse(localStorage.getItem('event_master_events')) || [
-    { id: 101, name: 'Workshop Primeiros Passos', date: '2026-02-15', location: 'Auditório A' }
-];
-let participants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
-let expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
-let currentEventId = parseInt(localStorage.getItem('event_master_current_id')) || (events.length > 0 ? events[0].id : null);
+let events = [];
+let participants = [];
+let expenses = [];
+let currentEventId = null;
+
+let isAppInitialized = false;
+
+async function syncToFirebase(collection, data) {
+    if (!auth.currentUser) return;
+    try {
+        await db.collection('eventMasterData').doc(collection).set({ items: data });
+    } catch (e) {
+        console.error("Erro ao salvar na nuvem:", e);
+    }
+}
+
+// Interceptar salvamentos locais para enviar para a nuvem
+const originalSetItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(key, value) {
+    originalSetItem(key, value);
+    if (key === 'event_master_events') syncToFirebase('events', JSON.parse(value));
+    if (key === 'event_master_participants') syncToFirebase('participants', JSON.parse(value));
+    if (key === 'event_master_expenses') syncToFirebase('expenses', JSON.parse(value));
+};
+
+// Listeners de Login
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    if(loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
+            const err = document.getElementById('login-error');
+            
+            btn.textContent = 'Carregando...';
+            btn.disabled = true;
+            
+            auth.signInWithEmailAndPassword(email, pass).catch(error => {
+                err.textContent = 'Erro: Verifique seu e-mail e senha.';
+                err.style.display = 'block';
+                btn.textContent = 'Entrar';
+                btn.disabled = false;
+            });
+        });
+    }
+});
+
+// Listener de Autenticação
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        document.getElementById('login-container').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        
+        try {
+            // Load from Firebase
+            const evDoc = await db.collection('eventMasterData').doc('events').get();
+            const paDoc = await db.collection('eventMasterData').doc('participants').get();
+            const exDoc = await db.collection('eventMasterData').doc('expenses').get();
+            
+            if (evDoc.exists) events = evDoc.data().items || [];
+            if (paDoc.exists) participants = paDoc.data().items || [];
+            if (exDoc.exists) expenses = exDoc.data().items || [];
+            
+            // Previne loop de salvamento ao carregar restaurando sem ativar o monkey patch
+            originalSetItem('event_master_events', JSON.stringify(events));
+            originalSetItem('event_master_participants', JSON.stringify(participants));
+            originalSetItem('event_master_expenses', JSON.stringify(expenses));
+            
+        } catch (e) {
+            console.error("Erro ao carregar da nuvem, usando cache local", e);
+            events = JSON.parse(localStorage.getItem('event_master_events')) || [];
+            participants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
+            expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
+        }
+        
+        const savedEventId = localStorage.getItem('event_master_current_id');
+        currentEventId = savedEventId ? parseInt(savedEventId) : (events.length > 0 ? events[0].id : null);
+        
+        if (!isAppInitialized) {
+            init();
+            isAppInitialized = true;
+        } else {
+            updateUIContext();
+            renderDashboard();
+            renderParticipantList();
+            renderEvents();
+        }
+        
+    } else {
+        document.getElementById('login-container').classList.remove('hidden');
+        document.getElementById('app').classList.add('hidden');
+    }
+});
 
 // Elementos do DOM
 const navItems = document.querySelectorAll('.nav-item');
@@ -543,7 +646,13 @@ function renderExpenseInstallmentsList(existingData = null) {
         const val = data ? data.value : valuePerInstallment;
         const status = data ? data.status : 'pending';
         const date = data ? data.paymentDate : '';
-        const dueDate = data ? data.dueDate : '';
+        let dueDate = data ? data.dueDate : '';
+
+        if (!dueDate) {
+            const today = new Date();
+            const d = new Date(today.getFullYear(), today.getMonth() + (i - 1), today.getDate());
+            dueDate = d.toISOString().split('T')[0];
+        }
 
         html += `
             <div class="installment-item" data-number="${i}">
@@ -577,6 +686,23 @@ function renderExpenseInstallmentsList(existingData = null) {
          `;
     }
     container.innerHTML = html;
+
+    // Listener para atualização em cascata das datas de vencimento
+    const dateInputs = container.querySelectorAll('.inst-due-date');
+    dateInputs.forEach((input, index) => {
+        input.addEventListener('change', (e) => {
+            const newDateStr = e.target.value;
+            if (!newDateStr) return;
+            // Parse considerando o fuso horário local para evitar desvios
+            const [year, month, day] = newDateStr.split('-').map(Number);
+            
+            for (let j = index + 1; j < dateInputs.length; j++) {
+                const nextInput = dateInputs[j];
+                const nextDate = new Date(year, month - 1 + (j - index), day);
+                nextInput.value = nextDate.toISOString().split('T')[0];
+            }
+        });
+    });
 }
 
 // --- Lógica de Participantes ---
@@ -1019,9 +1145,10 @@ function renderInstallmentsList(existingData = null) {
             if (fixedSchedule && fixedSchedule[i]) {
                 dueDate = fixedSchedule[i];
             }
-            // Fallback to Periodic Due Day
-            else if (dueDay) {
-                const d = new Date(startYear, startMonth + (i - 1), dueDay);
+            // Fallback to Periodic Due Day ou Data Atual
+            else {
+                const dayToUse = dueDay || today.getDate();
+                const d = new Date(startYear, startMonth + (i - 1), dayToUse);
                 dueDate = d.toISOString().split('T')[0];
             }
         }
@@ -1079,6 +1206,24 @@ function renderInstallmentsList(existingData = null) {
         `;
     }
     container.innerHTML = html;
+    
+    // Listener para atualização em cascata das datas de vencimento
+    const dateInputs = container.querySelectorAll('.inst-due-date');
+    dateInputs.forEach((input, index) => {
+        input.addEventListener('change', (e) => {
+            const newDateStr = e.target.value;
+            if (!newDateStr) return;
+            
+            const [year, month, day] = newDateStr.split('-').map(Number);
+            
+            for (let j = index + 1; j < dateInputs.length; j++) {
+                const nextInput = dateInputs[j];
+                const nextDate = new Date(year, month - 1 + (j - index), day);
+                nextInput.value = nextDate.toISOString().split('T')[0];
+            }
+        });
+    });
+
     lucide.createIcons();
 }
 
@@ -1713,4 +1858,4 @@ function importParticipantsCSV(file) {
     reader.readAsText(file);
 }
 
-init();
+// init();
