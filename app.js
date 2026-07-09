@@ -166,6 +166,7 @@ function triggerBackup() {
 
 // Inicialização
 function init() {
+    initTheme();
     setupEventListeners();
     updateUIContext();
     renderDashboard();
@@ -1875,6 +1876,42 @@ function importParticipantsCSV(file) {
         }
     };
     reader.readAsText(file);
+}
+
+// Lógica do Tema (Light / Dark)
+function initTheme() {
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const currentTheme = localStorage.getItem('event_master_theme') || 'dark';
+
+    if (currentTheme === 'light') {
+        document.body.classList.add('light-theme');
+        updateThemeIcon('light');
+    } else {
+        document.body.classList.remove('light-theme');
+        updateThemeIcon('dark');
+    }
+
+    if (themeToggleBtn && !themeToggleBtn.hasAttribute('data-listener')) {
+        themeToggleBtn.addEventListener('click', () => {
+            const isLight = document.body.classList.toggle('light-theme');
+            const newTheme = isLight ? 'light' : 'dark';
+            localStorage.setItem('event_master_theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+        themeToggleBtn.setAttribute('data-listener', 'true');
+    }
+}
+
+function updateThemeIcon(theme) {
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (!themeToggleBtn) return;
+    const icon = themeToggleBtn.querySelector('i');
+    if (icon) {
+        icon.setAttribute('data-lucide', theme === 'light' ? 'sun' : 'moon');
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
 }
 
 init();
