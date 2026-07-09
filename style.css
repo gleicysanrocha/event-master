@@ -185,6 +185,10 @@ nav {
     font-size: 2.25rem;
     font-weight: 800;
     letter-spacing: -0.03em;
+    color: var(--text-main);
+}
+
+body:not(.light-theme) .top-bar h1 {
     background: linear-gradient(135deg, #ffffff, #94a3b8);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -208,7 +212,7 @@ nav {
     display: flex;
     align-items: center;
     gap: 0.85rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-card);
     padding: 0.5rem 1rem 0.5rem 0.5rem;
     border-radius: 9999px;
     border: 1px solid var(--border);
@@ -451,19 +455,6 @@ nav {
 .btn-sm {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
-}
-
-.view-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-}
-
-.header-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-left: auto;
 }
 
 /* Data Tables */
@@ -1340,4 +1331,59 @@ body.light-theme .login-card h2 {
     background: linear-gradient(135deg, #0f172a, #475569);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+body.light-theme .nav-item {
+    color: #64748b;
+}
+
+body.light-theme .nav-item:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+    color: #0f172a;
+    border-color: #e2e8f0;
+}
+
+body.light-theme .btn-secondary {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+body.light-theme .btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+body.light-theme .card h3 {
+    color: #0f172a;
+}
+
+body.light-theme .icon-btn {
+    color: #64748b;
+}
+
+body.light-theme ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+body.light-theme ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
+
+body.light-theme ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+body.light-theme .menu-toggle {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+body.light-theme .stat-label {
+    color: #64748b;
+}
+
+body.light-theme .stat-info h2 {
+    color: #0f172a;
 }
