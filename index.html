@@ -169,7 +169,6 @@
             <!-- Participants View -->
             <section id="participants" class="view hidden">
                 <div class="view-header">
-                    <div id="participant-event-name" style="font-size: 0.9rem; color: var(--text-muted);"></div>
                     <div class="header-actions">
                         <input type="file" id="import-csv-input" accept=".csv" class="hidden">
                         <button class="btn btn-secondary" onclick="document.getElementById('import-csv-input').click()">
@@ -199,7 +198,7 @@
                 </div>
 
                 <div class="card">
-                    <div class="filters-row" style="display: flex; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap;">
+                    <div class="filters-row" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap;">
                         <div class="search-bar" style="flex: 2; min-width: 250px; margin-bottom: 0;">
                             <i data-lucide="search"></i>
                             <input type="text" id="search-participants" placeholder="Buscar por nome ou email...">

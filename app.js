@@ -342,13 +342,14 @@ function setupEventListeners() {
 // Gerenciamento de Contexto
 function updateUIContext() {
     const activeEvent = events.find(e => e.id === currentEventId);
+    const pEventEl = document.getElementById('participant-event-name');
     if (activeEvent) {
         currentEventBadge.classList.remove('hidden');
         currentEventName.textContent = activeEvent.name;
-        document.getElementById('participant-event-name').textContent = `(Evento: ${activeEvent.name})`;
+        if (pEventEl) pEventEl.textContent = `(Evento: ${activeEvent.name})`;
     } else {
         currentEventBadge.classList.add('hidden');
-        document.getElementById('participant-event-name').textContent = '';
+        if (pEventEl) pEventEl.textContent = '';
     }
 }
 
@@ -375,7 +376,7 @@ function switchView(viewId) {
     const titles = {
         'dashboard': 'Painel de Controle',
         'events': 'Gestão de Eventos',
-        'participants': 'Participantes',
+        'participants': 'Gerenciamento de Participantes',
         'reports': 'Relatórios Financeiros'
     };
     viewTitle.textContent = titles[viewId] || viewId;
@@ -561,7 +562,7 @@ function renderEvents() {
                         <button class="icon-btn" onclick="editEvent(${event.id}, event)" title="Editar Evento">
                              <i data-lucide="edit-3"></i>
                         </button>
-                        <button class="icon-btn" onclick="deleteEvent(${event.id}, event)" title="Excluir Evento" style="color: var(--error);">
+                        <button class="icon-btn delete-btn" onclick="deleteEvent(${event.id}, event)" title="Excluir Evento">
                              <i data-lucide="trash"></i>
                         </button>
                     </div>
@@ -830,6 +831,18 @@ function renderParticipantList() {
         };
         const conf = confMap[p.confirmation || 'later'] || confMap['later'];
 
+        const emailHtml = p.email 
+            ? `<div class="text-sm text-muted flex-align-center" style="margin-top: 0.15rem;">
+                <i data-lucide="mail" class="contact-icon-inline"></i>${p.email}
+               </div>` 
+            : `<div class="text-sm empty-field">Sem e-mail</div>`;
+
+        const phoneHtml = p.phone 
+            ? `<span class="contact-item">
+                <i data-lucide="phone" class="contact-icon"></i>${p.phone}
+               </span>` 
+            : `<span class="empty-field">Sem telefone</span>`;
+
         return `
             <tr class="${isSelected ? 'selected-row' : ''}">
                 <td style="text-align: center;">
@@ -840,11 +853,11 @@ function renderParticipantList() {
                         <div class="avatar-sm">${p.name.charAt(0).toUpperCase()}</div>
                         <div>
                             <div class="font-medium">${p.name}</div>
-                            <div class="text-sm text-muted">${p.email || ''}</div>
+                            ${emailHtml}
                         </div>
                     </div>
                 </td>
-                <td>${p.phone || '-'}</td>
+                <td>${phoneHtml}</td>
                 <td>${paymentInfo}</td>
                 <td>R$ ${p.price.toFixed(2).replace('.', ',')}</td>
                 <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
@@ -854,7 +867,7 @@ function renderParticipantList() {
                         <button class="icon-btn" onclick="editParticipant(${p.id})" title="Editar">
                             <i data-lucide="edit-2"></i>
                         </button>
-                        <button class="icon-btn" onclick="deleteParticipant(${p.id})" title="Excluir" style="color:var(--error)">
+                        <button class="icon-btn delete-btn" onclick="deleteParticipant(${p.id})" title="Excluir">
                             <i data-lucide="trash-2"></i>
                         </button>
                         <button class="icon-btn whatsapp-btn" onclick="sendWhatsApp(${p.id})" title="Enviar WhatsApp">

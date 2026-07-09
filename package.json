@@ -1,0 +1,24 @@
+{
+  "name": "event-master",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão de Eventos e Participantes",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . \"Event Master\" --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "build": {
+    "appId": "com.eventmaster.app",
+    "productName": "Event Master",
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "author": "Gleiciano",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-packager": "^17.1.2"
+  }
+}

@@ -471,7 +471,7 @@ th {
     padding: 1.1rem 1.25rem;
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: #cbd5e1;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     border-bottom: 2px solid rgba(255, 255, 255, 0.06);
@@ -548,13 +548,56 @@ tr.selected-row td {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.5;
     transition: var(--transition);
 }
 
 .icon-btn:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.06);
     color: var(--primary);
     border-color: var(--border);
+}
+
+.icon-btn.delete-btn:hover {
+    opacity: 1;
+    color: var(--error) !important;
+    background-color: rgba(244, 63, 94, 0.1) !important;
+    border-color: rgba(244, 63, 94, 0.2) !important;
+}
+
+/* Classes utilitárias para ícones de contato */
+.contact-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #e2e8f0;
+}
+
+.contact-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--primary);
+    opacity: 0.75;
+}
+
+.contact-icon-inline {
+    width: 12px;
+    height: 12px;
+    margin-right: 0.35rem;
+    color: var(--text-muted);
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.flex-align-center {
+    display: flex;
+    align-items: center;
+}
+
+.empty-field {
+    color: rgba(255, 255, 255, 0.2) !important;
+    font-size: 0.85rem;
 }
 
 .icon-btn i {
