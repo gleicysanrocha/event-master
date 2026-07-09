@@ -10,44 +10,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Firebase SDK (Compat Version for Vanilla JS) -->
-    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
-    <!-- Login Screen -->
-    <div id="login-container" class="login-overlay">
-        <div class="login-card card">
-            <div class="logo" style="justify-content: center; margin-bottom: 1.5rem;">
-                <i data-lucide="calendar-days" style="color: var(--primary);"></i>
-                <span style="font-size: 1.5rem; font-weight: 700; color: var(--text);">EventMaster</span>
-            </div>
-            <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--text);">Acesso Restrito</h2>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="login-email">E-mail</label>
-                    <input type="email" id="login-email" required placeholder="seu@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Senha</label>
-                    <input type="password" id="login-password" required placeholder="******">
-                </div>
-                <div id="login-error" style="color: var(--error); font-size: 0.9rem; margin-bottom: 1rem; text-align: center; display: none;"></div>
-                <button type="submit" class="btn btn-primary" id="login-btn" style="width: 100%; justify-content: center;">Entrar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- App Container -->
-    <div id="app" class="hidden">
+    <div id="app">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="logo">
                 <i data-lucide="calendar-days"></i>
                 <span>EventMaster</span>
+                <button id="sidebar-close-btn" class="icon-btn no-print" style="margin-left: auto; display: none;" title="Fechar Menu">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <nav>
                 <button class="nav-item active" data-view="dashboard">
@@ -69,6 +43,9 @@
         <main class="content">
             <header class="top-bar">
                 <div class="header-left">
+                    <button id="menu-toggle-btn" class="menu-toggle" title="Abrir Menu">
+                        <i data-lucide="menu"></i>
+                    </button>
                     <h1 id="view-title">Painel de Controle</h1>
                     <div id="event-context-badge" class="badge hidden">Evento: <span id="current-event-name"></span>
                     </div>
@@ -193,9 +170,35 @@
                 </div>
 
                 <div class="card">
-                    <div class="search-bar">
-                        <i data-lucide="search"></i>
-                        <input type="text" id="search-participants" placeholder="Buscar por nome ou email...">
+                    <div class="filters-row" style="display: flex; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap;">
+                        <div class="search-bar" style="flex: 2; min-width: 250px; margin-bottom: 0;">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="search-participants" placeholder="Buscar por nome ou email...">
+                        </div>
+                        <div class="filter-group" style="flex: 1; min-width: 150px;">
+                            <select id="filter-status">
+                                <option value="">Status: Todos</option>
+                                <option value="paid">Pago</option>
+                                <option value="pending">Pendente</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="flex: 1; min-width: 150px;">
+                            <select id="filter-confirmation">
+                                <option value="">Confirmação: Todas</option>
+                                <option value="yes">Sim (RSVP)</option>
+                                <option value="no">Não (RSVP)</option>
+                                <option value="maybe">Talvez (RSVP)</option>
+                                <option value="pending">Pendente (RSVP)</option>
+                                <option value="later">Confirmar Depois</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="flex: 1; min-width: 150px;">
+                            <select id="filter-payment-type">
+                                <option value="">Pagamento: Todos</option>
+                                <option value="cash">À Vista / Único</option>
+                                <option value="installments">Parcelado</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="participants-table">

@@ -1,113 +1,10 @@
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyCK_iUPG-yGOvWr0fn71RH6lirmRU8bLBk",
-  authDomain: "eventmaster-8d2c2.firebaseapp.com",
-  projectId: "eventmaster-8d2c2",
-  storageBucket: "eventmaster-8d2c2.firebasestorage.app",
-  messagingSenderId: "50578141487",
-  appId: "1:50578141487:web:0e13e99748f7e71ccd31da"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
 // Gerenciamento de Estado da App
-let events = [];
-let participants = [];
-let expenses = [];
-let currentEventId = null;
-
-let isAppInitialized = false;
-
-async function syncToFirebase(collection, data) {
-    if (!auth.currentUser) return;
-    try {
-        await db.collection('eventMasterData').doc(collection).set({ items: data });
-    } catch (e) {
-        console.error("Erro ao salvar na nuvem:", e);
-    }
-}
-
-// Interceptar salvamentos locais para enviar para a nuvem
-const originalSetItem = localStorage.setItem.bind(localStorage);
-localStorage.setItem = function(key, value) {
-    originalSetItem(key, value);
-    if (key === 'event_master_events') syncToFirebase('events', JSON.parse(value));
-    if (key === 'event_master_participants') syncToFirebase('participants', JSON.parse(value));
-    if (key === 'event_master_expenses') syncToFirebase('expenses', JSON.parse(value));
-};
-
-// Listeners de Login
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    if(loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-password').value;
-            const btn = document.getElementById('login-btn');
-            const err = document.getElementById('login-error');
-            
-            btn.textContent = 'Carregando...';
-            btn.disabled = true;
-            
-            auth.signInWithEmailAndPassword(email, pass).catch(error => {
-                err.textContent = 'Erro: Verifique seu e-mail e senha.';
-                err.style.display = 'block';
-                btn.textContent = 'Entrar';
-                btn.disabled = false;
-            });
-        });
-    }
-});
-
-// Listener de Autenticação
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        document.getElementById('login-container').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-        
-        try {
-            // Load from Firebase
-            const evDoc = await db.collection('eventMasterData').doc('events').get();
-            const paDoc = await db.collection('eventMasterData').doc('participants').get();
-            const exDoc = await db.collection('eventMasterData').doc('expenses').get();
-            
-            if (evDoc.exists) events = evDoc.data().items || [];
-            if (paDoc.exists) participants = paDoc.data().items || [];
-            if (exDoc.exists) expenses = exDoc.data().items || [];
-            
-            // Previne loop de salvamento ao carregar restaurando sem ativar o monkey patch
-            originalSetItem('event_master_events', JSON.stringify(events));
-            originalSetItem('event_master_participants', JSON.stringify(participants));
-            originalSetItem('event_master_expenses', JSON.stringify(expenses));
-            
-        } catch (e) {
-            console.error("Erro ao carregar da nuvem, usando cache local", e);
-            events = JSON.parse(localStorage.getItem('event_master_events')) || [];
-            participants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
-            expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
-        }
-        
-        const savedEventId = localStorage.getItem('event_master_current_id');
-        currentEventId = savedEventId ? parseInt(savedEventId) : (events.length > 0 ? events[0].id : null);
-        
-        if (!isAppInitialized) {
-            init();
-            isAppInitialized = true;
-        } else {
-            updateUIContext();
-            renderDashboard();
-            renderParticipantList();
-            renderEvents();
-        }
-        
-    } else {
-        document.getElementById('login-container').classList.remove('hidden');
-        document.getElementById('app').classList.add('hidden');
-    }
-});
+let events = JSON.parse(localStorage.getItem('event_master_events')) || [
+    { id: 101, name: 'Workshop Primeiros Passos', date: '2026-02-15', location: 'Auditório A' }
+];
+let participants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
+let expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
+let currentEventId = parseInt(localStorage.getItem('event_master_current_id')) || (events.length > 0 ? events[0].id : null);
 
 // Elementos do DOM
 const navItems = document.querySelectorAll('.nav-item');
@@ -115,6 +12,9 @@ const views = document.querySelectorAll('.view');
 const viewTitle = document.getElementById('view-title');
 const currentEventBadge = document.getElementById('event-context-badge');
 const currentEventName = document.getElementById('current-event-name');
+const sidebarElement = document.getElementById('sidebar');
+const menuToggleBtn = document.getElementById('menu-toggle-btn');
+const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
 
 // Elementos do Modal de Participante
 const modalOverlay = document.getElementById('modal-container');
@@ -147,6 +47,20 @@ const expensePaymentTypeSelect = document.getElementById('expense-payment-type')
 const expenseInstallmentsGroup = document.getElementById('expense-installments-group');
 const expenseStatusGroup = document.getElementById('expense-status-group');
 
+// Electron IPC Integration for Backups
+const isElectron = typeof require !== 'undefined';
+function triggerBackup() {
+    if (isElectron) {
+        const { ipcRenderer } = require('electron');
+        const backupData = {
+            events: events,
+            participants: participants,
+            expenses: expenses
+        };
+        ipcRenderer.send('save-backup', backupData);
+    }
+}
+
 // Inicialização
 function init() {
     setupEventListeners();
@@ -163,8 +77,24 @@ function setupEventListeners() {
         item.addEventListener('click', () => {
             const viewId = item.getAttribute('data-view');
             switchView(viewId);
+            if (sidebarElement) {
+                sidebarElement.classList.remove('open');
+            }
         });
     });
+
+    // Toggle do Menu Mobile
+    if (menuToggleBtn && sidebarElement) {
+        menuToggleBtn.addEventListener('click', () => {
+            sidebarElement.classList.add('open');
+        });
+    }
+
+    if (sidebarCloseBtn && sidebarElement) {
+        sidebarCloseBtn.addEventListener('click', () => {
+            sidebarElement.classList.remove('open');
+        });
+    }
 
     // Modal de Participante
     openModalBtn.addEventListener('click', () => {
@@ -274,9 +204,13 @@ function setupEventListeners() {
         saveExpense();
     });
 
-    // Busca
-    document.getElementById('search-participants').addEventListener('input', (e) => {
-        renderParticipantList(e.target.value);
+    // Busca e Filtros
+    ['search-participants', 'filter-status', 'filter-confirmation', 'filter-payment-type'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => renderParticipantList());
+            el.addEventListener('change', () => renderParticipantList());
+        }
     });
 
     // Exportação
@@ -429,6 +363,7 @@ function saveEvent() {
     renderEvents();
     updateUIContext();
     lucide.createIcons();
+    triggerBackup();
 }
 
 function renderEventScheduleInputs(existingSchedule = null) {
@@ -499,6 +434,7 @@ function deleteEvent(id, event) {
         renderDashboard();
         renderParticipantList();
         lucide.createIcons();
+        triggerBackup();
     }
 }
 
@@ -628,6 +564,7 @@ function saveExpense() {
     expenseForm.reset();
     renderDashboard();
     renderEvents(); // Atualizar card
+    triggerBackup();
 }
 
 function renderExpenseInstallmentsList(existingData = null) {
@@ -646,13 +583,7 @@ function renderExpenseInstallmentsList(existingData = null) {
         const val = data ? data.value : valuePerInstallment;
         const status = data ? data.status : 'pending';
         const date = data ? data.paymentDate : '';
-        let dueDate = data ? data.dueDate : '';
-
-        if (!dueDate) {
-            const today = new Date();
-            const d = new Date(today.getFullYear(), today.getMonth() + (i - 1), today.getDate());
-            dueDate = d.toISOString().split('T')[0];
-        }
+        const dueDate = data ? data.dueDate : '';
 
         html += `
             <div class="installment-item" data-number="${i}">
@@ -686,23 +617,6 @@ function renderExpenseInstallmentsList(existingData = null) {
          `;
     }
     container.innerHTML = html;
-
-    // Listener para atualização em cascata das datas de vencimento
-    const dateInputs = container.querySelectorAll('.inst-due-date');
-    dateInputs.forEach((input, index) => {
-        input.addEventListener('change', (e) => {
-            const newDateStr = e.target.value;
-            if (!newDateStr) return;
-            // Parse considerando o fuso horário local para evitar desvios
-            const [year, month, day] = newDateStr.split('-').map(Number);
-            
-            for (let j = index + 1; j < dateInputs.length; j++) {
-                const nextInput = dateInputs[j];
-                const nextDate = new Date(year, month - 1 + (j - index), day);
-                nextInput.value = nextDate.toISOString().split('T')[0];
-            }
-        });
-    });
 }
 
 // --- Lógica de Participantes ---
@@ -760,22 +674,35 @@ function saveParticipant() {
     renderDashboard(); // Atualizar stats
     updateUIContext();
     lucide.createIcons();
+    triggerBackup();
 }
 
 // Bulk Selection State
 let selectedParticipantIds = new Set();
 
-function renderParticipantList(filterText = '') {
-    const tbody = document.querySelector('#participants-table tbody');
-    if (!tbody) return;
+function getFilteredParticipants() {
+    const filterText = document.getElementById('search-participants') ? document.getElementById('search-participants').value : '';
+    const statusFilter = document.getElementById('filter-status') ? document.getElementById('filter-status').value : '';
+    const confFilter = document.getElementById('filter-confirmation') ? document.getElementById('filter-confirmation').value : '';
+    const typeFilter = document.getElementById('filter-payment-type') ? document.getElementById('filter-payment-type').value : '';
 
-    // Filtra por evento ativo e busca de texto
-    const filtered = participants.filter(p => {
+    return participants.filter(p => {
         const matchesEvent = currentEventId ? p.eventId === currentEventId : true;
         const matchesSearch = p.name.toLowerCase().includes(filterText.toLowerCase()) ||
             (p.email && p.email.toLowerCase().includes(filterText.toLowerCase()));
-        return matchesEvent && matchesSearch;
+        const matchesStatus = statusFilter ? p.status === statusFilter : true;
+        const matchesConf = confFilter ? (p.confirmation || 'later') === confFilter : true;
+        const matchesType = typeFilter ? p.paymentType === typeFilter : true;
+        
+        return matchesEvent && matchesSearch && matchesStatus && matchesConf && matchesType;
     });
+}
+
+function renderParticipantList() {
+    const tbody = document.querySelector('#participants-table tbody');
+    if (!tbody) return;
+
+    const filtered = getFilteredParticipants();
 
     tbody.innerHTML = filtered.map(p => {
         const statusClass = p.status === 'paid' ? 'status-paid' : 'status-pending';
@@ -849,28 +776,20 @@ function renderParticipantList(filterText = '') {
     // Select All Logic update
     const selectAll = document.getElementById('select-all-participants');
     if (selectAll) {
-        // Simple check if all visible are selected
         const allVisibleIds = filtered.map(p => p.id);
         const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedParticipantIds.has(id));
         selectAll.checked = allSelected;
 
-        // Remove old listener to avoid dupes? Better to just re-attach or handle outside.
-        // Let's handle outside or ensure idempotent.
         if (!selectAll.hasAttribute('data-listener')) {
             selectAll.addEventListener('change', (e) => {
                 const isChecked = e.target.checked;
-                const visible = participants.filter(p => {
-                    const matchesEvent = currentEventId ? p.eventId === currentEventId : true;
-                    const matchesSearch = p.name.toLowerCase().includes(document.getElementById('search-participants').value.toLowerCase()) ||
-                        (p.email && p.email.toLowerCase().includes(document.getElementById('search-participants').value.toLowerCase()));
-                    return matchesEvent && matchesSearch;
-                });
+                const visible = getFilteredParticipants();
 
                 visible.forEach(p => {
                     if (isChecked) selectedParticipantIds.add(p.id);
                     else selectedParticipantIds.delete(p.id);
                 });
-                renderParticipantList(document.getElementById('search-participants').value);
+                renderParticipantList();
                 updateBulkActionsUI();
             });
             selectAll.setAttribute('data-listener', 'true');
@@ -921,6 +840,7 @@ function deleteParticipant(id) {
         renderParticipantList();
         renderDashboard();
         updateUIContext();
+        triggerBackup();
     }
 }
 
@@ -1145,10 +1065,9 @@ function renderInstallmentsList(existingData = null) {
             if (fixedSchedule && fixedSchedule[i]) {
                 dueDate = fixedSchedule[i];
             }
-            // Fallback to Periodic Due Day ou Data Atual
-            else {
-                const dayToUse = dueDay || today.getDate();
-                const d = new Date(startYear, startMonth + (i - 1), dayToUse);
+            // Fallback to Periodic Due Day
+            else if (dueDay) {
+                const d = new Date(startYear, startMonth + (i - 1), dueDay);
                 dueDate = d.toISOString().split('T')[0];
             }
         }
@@ -1206,24 +1125,6 @@ function renderInstallmentsList(existingData = null) {
         `;
     }
     container.innerHTML = html;
-    
-    // Listener para atualização em cascata das datas de vencimento
-    const dateInputs = container.querySelectorAll('.inst-due-date');
-    dateInputs.forEach((input, index) => {
-        input.addEventListener('change', (e) => {
-            const newDateStr = e.target.value;
-            if (!newDateStr) return;
-            
-            const [year, month, day] = newDateStr.split('-').map(Number);
-            
-            for (let j = index + 1; j < dateInputs.length; j++) {
-                const nextInput = dateInputs[j];
-                const nextDate = new Date(year, month - 1 + (j - index), day);
-                nextInput.value = nextDate.toISOString().split('T')[0];
-            }
-        });
-    });
-
     lucide.createIcons();
 }
 
@@ -1466,6 +1367,7 @@ if (bulkDeleteBtn) {
             lucide.createIcons();
 
             alert(`${selectedParticipantIds.size === 1 ? 'Participante excluído' : 'Participantes excluídos'} com sucesso!`);
+            triggerBackup();
         }
     });
 }
@@ -1625,6 +1527,7 @@ function applyBulkEdit() {
     renderDashboard();
     updateUIContext();
     alert("Alterações aplicadas com sucesso!");
+    triggerBackup();
 }
 
 function generatePrintableReport() {
@@ -1858,4 +1761,4 @@ function importParticipantsCSV(file) {
     reader.readAsText(file);
 }
 
-// init();
+init();
