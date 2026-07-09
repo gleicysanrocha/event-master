@@ -10,10 +10,39 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDK (Compat Version for Vanilla JS) -->
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
-    <div id="app">
+    <!-- Login Screen -->
+    <div id="login-container" class="login-overlay">
+        <div class="login-card card">
+            <div class="logo" style="justify-content: center; margin-bottom: 1.5rem;">
+                <i data-lucide="calendar-days" style="color: var(--primary);"></i>
+                <span style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">EventMaster</span>
+            </div>
+            <h2>Acesso Restrito</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">E-mail</label>
+                    <input type="email" id="login-email" required placeholder="seu@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Senha</label>
+                    <input type="password" id="login-password" required placeholder="******">
+                </div>
+                <div id="login-error" style="color: var(--error); font-size: 0.9rem; margin-bottom: 1rem; text-align: center; display: none;"></div>
+                <button type="submit" class="btn btn-primary" id="login-btn" style="width: 100%; justify-content: center;">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app" class="hidden">
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
             <div class="logo">
