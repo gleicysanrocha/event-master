@@ -886,6 +886,13 @@ function renderParticipantList() {
 
     const filtered = getFilteredParticipants();
 
+    // Atualiza contadores de participantes
+    const total = currentEventId ? participants.filter(p => p.eventId == currentEventId).length : participants.length;
+    const countFilteredEl = document.getElementById('count-filtered');
+    const countTotalEl = document.getElementById('count-total');
+    if (countFilteredEl) countFilteredEl.textContent = filtered.length;
+    if (countTotalEl) countTotalEl.textContent = total;
+
     tbody.innerHTML = filtered.map(p => {
         const statusClass = p.status === 'paid' ? 'status-paid' : 'status-pending';
         const statusLabel = p.status === 'paid' ? 'Pago' : 'Pendente';
