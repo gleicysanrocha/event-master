@@ -656,17 +656,17 @@ function renderEvents() {
         const isActive = event.id == currentEventId;
 
         return `
-            <div class="event-card ${isActive ? 'active' : ''}" onclick="switchEvent(${event.id})">
+            <div class="event-card ${isActive ? 'active' : ''}" onclick="switchEvent('${event.id}')">
                 <div class="event-header">
                     <h3>${event.name}</h3>
                     <div class="card-actions">
-                         <button class="icon-btn" onclick="openExpenseModal(${event.id}, event)" title="Lançar Gasto">
+                         <button class="icon-btn" onclick="openExpenseModal('${event.id}', event)" title="Lançar Gasto">
                              <i data-lucide="minus-circle" style="color:red"></i>
                         </button>
-                        <button class="icon-btn" onclick="editEvent(${event.id}, event)" title="Editar Evento">
+                        <button class="icon-btn" onclick="editEvent('${event.id}', event)" title="Editar Evento">
                              <i data-lucide="edit-3"></i>
                         </button>
-                        <button class="icon-btn delete-btn" onclick="deleteEvent(${event.id}, event)" title="Excluir Evento">
+                        <button class="icon-btn delete-btn" onclick="deleteEvent('${event.id}', event)" title="Excluir Evento">
                              <i data-lucide="trash"></i>
                         </button>
                     </div>
@@ -975,13 +975,13 @@ function renderParticipantList() {
                 <td><span class="status-badge ${conf.class}">${conf.label}</span></td>
                 <td>
                     <div class="action-buttons">
-                        <button class="icon-btn" onclick="editParticipant(${p.id})" title="Editar">
+                        <button class="icon-btn" onclick="editParticipant('${p.id}')" title="Editar">
                             <i data-lucide="edit-2"></i>
                         </button>
-                        <button class="icon-btn delete-btn" onclick="deleteParticipant(${p.id})" title="Excluir">
+                        <button class="icon-btn delete-btn" onclick="deleteParticipant('${p.id}')" title="Excluir">
                             <i data-lucide="trash-2"></i>
                         </button>
-                        <button class="icon-btn whatsapp-btn" onclick="sendWhatsApp(${p.id})" title="Enviar WhatsApp">
+                        <button class="icon-btn whatsapp-btn" onclick="sendWhatsApp('${p.id}')" title="Enviar WhatsApp">
                              <i data-lucide="message-circle"></i>
                         </button>
                     </div>
