@@ -362,6 +362,7 @@
                             <select id="payment-type" required>
                                 <option value="cash">À Vista</option>
                                 <option value="installments">Parcelado</option>
+                                <option value="partial">Livre / Parcial</option>
                             </select>
                         </div>
                         <div id="installments-group" class="form-group hidden">
@@ -373,8 +374,21 @@
                         <label>Detalhamento das Parcelas</label>
                         <div id="installments-list" class="installments-grid">
                             <!-- Injetado via JS -->
+                    </div>
+                    
+                    <div id="partial-group" class="form-group hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="partial-paid-amount">Valor Pago (R$)</label>
+                                <input type="number" id="partial-paid-amount" step="0.01" value="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="partial-balance-amount">Falta Pagar (R$)</label>
+                                <input type="number" id="partial-balance-amount" readonly step="0.01" value="0.00" style="background-color: var(--bg-secondary); color: var(--text-muted); cursor: not-allowed;">
+                            </div>
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label for="price">Valor Total (R$)</label>
                         <input type="number" id="price" required step="0.01" value="0.00">
@@ -401,7 +415,7 @@
                         <textarea id="payment-obs" rows="2"
                             placeholder="Detalhes do pagamento, comprovantes, etc."></textarea>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="status-group">
                         <label for="status">Status do Pagamento</label>
                         <select id="status" required>
                             <option value="pending">Pendente</option>

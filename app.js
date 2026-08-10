@@ -388,11 +388,23 @@ function setupEventListeners() {
 
     paymentTypeSelect.addEventListener('change', (e) => {
         const isInstallments = e.target.value === 'installments';
+        const isPartial = e.target.value === 'partial';
+
         installmentsGroup.classList.toggle('hidden', !isInstallments);
         document.getElementById('installments-list-container').classList.toggle('hidden', !isInstallments);
+        
+        const partialGroup = document.getElementById('partial-group');
+        if (partialGroup) partialGroup.classList.toggle('hidden', !isPartial);
+        
+        const statusGroup = document.getElementById('status-group');
+        if (statusGroup) statusGroup.classList.toggle('hidden', isInstallments || isPartial);
 
         if (isInstallments && (!participantEditId.value || e.isTrusted)) {
             renderInstallmentsList();
+        }
+        
+        if (isPartial) {
+            updatePartialPaymentBalance();
         }
     });
 
@@ -403,6 +415,9 @@ function setupEventListeners() {
     document.getElementById('price').addEventListener('input', () => {
         if (paymentTypeSelect.value === 'installments' && !participantEditId.value) {
             renderInstallmentsList();
+        }
+        if (paymentTypeSelect.value === 'partial') {
+            updatePartialPaymentBalance();
         }
     });
 
@@ -909,22 +924,34 @@ function saveParticipant() {
         });
     }
 
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    let status = document.getElementById('status').value;
+    let paidAmount = 0;
+
+    if (paymentType === 'installments') {
+        paidAmount = installmentsData.reduce((acc, inst) => acc + inst.paidValue, 0);
+        status = installmentsData.every(i => i.status === 'paid') ? 'paid' : 'pending';
+    } else if (paymentType === 'partial') {
+        paidAmount = parseFloat(document.getElementById('partial-paid-amount').value) || 0;
+        status = paidAmount >= price && price > 0 ? 'paid' : 'pending';
+    } else {
+        paidAmount = status === 'paid' ? price : 0;
+    }
+
     const participantData = {
         eventId: parseInt(regEventSelect.value),
         name: document.getElementById('name').value,
         email: document.getElementById('email').value,
         phone: document.getElementById('phone').value,
-        price: parseFloat(document.getElementById('price').value) || 0,
+        price: price,
         paymentType: paymentType,
         paymentDate: document.getElementById('payment-date').value,
         paymentMethod: document.getElementById('payment-method').value,
         obs: document.getElementById('payment-obs').value,
-        status: document.getElementById('status').value,
+        status: status,
         confirmation: document.getElementById('confirmation').value,
         installments: paymentType === 'installments' ? installmentsData : [],
-        paidAmount: paymentType === 'installments'
-            ? installmentsData.reduce((acc, inst) => acc + inst.paidValue, 0)
-            : (document.getElementById('status').value === 'paid' ? parseFloat(document.getElementById('price').value) : 0)
+        paidAmount: paidAmount
     };
 
     if (id && id !== 'undefined' && id !== 'null') {
@@ -989,6 +1016,15 @@ function renderParticipantList() {
             const paidInst = p.installments.filter(i => i.status === 'paid').length;
             const totalInst = p.installments.length;
             paymentInfo = `<span class="badge" style="background:var(--bg-secondary)">${paidInst}/${totalInst} Parc.</span>`;
+        } else if (p.paymentType === 'partial') {
+            const remaining = Math.max(0, p.price - (p.paidAmount || 0));
+            paymentInfo = `
+                <div style="font-size: 0.85rem; line-height: 1.3;">
+                    <span style="color: var(--primary); font-weight: 600;">R$ ${(p.paidAmount || 0).toFixed(2).replace('.', ',')}</span>
+                    <span style="color: var(--text-muted);">/ R$ ${p.price.toFixed(2).replace('.', ',')}</span>
+                    ${remaining > 0 ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 0.15rem; font-weight: 500;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>` : '<div style="font-size: 0.75rem; color: #34d399; margin-top: 0.15rem; font-weight: 500;">Quitado</div>'}
+                </div>
+            `;
         } else {
             paymentInfo = p.paymentMethod || '-';
         }
@@ -1115,6 +1151,9 @@ function editParticipant(id) {
     if (p.paymentType === 'installments') {
         document.getElementById('installments').value = p.installments.length;
         renderInstallmentsList(p.installments);
+    } else if (p.paymentType === 'partial') {
+        document.getElementById('partial-paid-amount').value = p.paidAmount || 0;
+        updatePartialPaymentBalance();
     }
 
     modalOverlay.classList.remove('hidden');
@@ -1413,6 +1452,16 @@ function renderInstallmentsList(existingData = null) {
     }
     container.innerHTML = html;
     lucide.createIcons();
+}
+
+function updatePartialPaymentBalance() {
+    const totalPrice = parseFloat(document.getElementById('price').value) || 0;
+    const paidValue = parseFloat(document.getElementById('partial-paid-amount').value) || 0;
+    const balance = Math.max(0, totalPrice - paidValue);
+    const balanceEl = document.getElementById('partial-balance-amount');
+    if (balanceEl) {
+        balanceEl.value = balance.toFixed(2);
+    }
 }
 
 function togglePaidStatus(number, checkbox) {
