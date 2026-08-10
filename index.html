@@ -76,7 +76,9 @@
                         <i data-lucide="menu"></i>
                     </button>
                     <h1 id="view-title">Painel de Controle</h1>
-                    <div id="event-context-badge" class="badge hidden">Evento: <span id="current-event-name"></span>
+                    <div id="event-context-badge" class="badge hidden">Evento: <span id="current-event-name"></span></div>
+                    <div id="db-sync-status" class="badge sync-badge-offline" title="Status da sincronização com o banco de dados">
+                        <i data-lucide="cloud-off"></i> Modo Local
                     </div>
                 </div>
                 <div class="user-profile">
@@ -158,8 +160,7 @@
 
             <!-- Events View -->
             <section id="events" class="view hidden">
-                <div class="view-header">
-                    <h2>Gerenciar Eventos</h2>
+                <div class="view-header" style="justify-content: flex-end;">
                     <button class="btn btn-primary" id="open-event-modal">
                         <i data-lucide="plus"></i> Novo Evento
                     </button>
@@ -187,7 +188,7 @@
                 </div>
 
                 <div id="bulk-actions-bar" class="hidden"
-                    style="background: var(--bg-card); padding: 0.5rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between;">
+                    style="background: var(--bg-card); padding: 0.5rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between;">
                     <span id="selection-count" style="font-weight: 500;">0 selecionados</span>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-secondary" id="open-bulk-modal">
@@ -235,7 +236,7 @@
                         <table id="participants-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 40px;"><input type="checkbox" id="select-all-participants"></th>
+                                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="select-all-participants"></th>
                                     <th>Participante</th>
                                     <th>Contato</th>
                                     <th>Pagamento</th>
@@ -439,8 +440,8 @@
                             <input type="text" id="event-location" required placeholder="Ex: Auditório Principal">
                         </div>
                     </div>
-                    <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--border-color);">
-                    <div class="form-row">
+                    <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--border);">
+                    <div class="form-row-3">
                         <div class="form-group">
                             <label for="event-price">Valor Padrão (R$)</label>
                             <input type="number" id="event-price" step="0.01" placeholder="0.00">
@@ -456,7 +457,7 @@
                     </div>
 
                     <div id="event-schedule-container"
-                        style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                        style="margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 1rem;">
                         <label
                             style="display:block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">Datas
                             de Vencimento Fixas (Opcional)</label>
@@ -539,7 +540,7 @@
                         participantes</p>
 
                     <div class="form-group"
-                        style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius); margin-bottom: 1rem;">
+                        style="padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 1rem;">
                         <label class="switch-mini" style="margin-bottom: 0;">
                             <input type="checkbox" id="bulk-apply-installments">
                             <span class="slider-mini"></span>
@@ -603,7 +604,7 @@
                     </div>
 
                     <div class="form-group"
-                        style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius); margin-bottom: 1rem;">
+                        style="padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 1rem;">
                         <label class="switch-mini" style="margin-bottom: 0;">
                             <input type="checkbox" id="bulk-pay-installment-check">
                             <span class="slider-mini"></span>

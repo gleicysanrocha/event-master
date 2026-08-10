@@ -20,13 +20,58 @@ let currentEventId = null;
 
 let isAppInitialized = false;
 
-async function syncToFirebase(collection, data) {
-    if (!auth.currentUser) return;
-    try {
-        await db.collection('eventMasterData').doc(collection).set({ items: data });
-    } catch (e) {
-        console.error("Erro ao salvar na nuvem:", e);
+// Controle de estado de sincronização
+let syncTimeouts = {};
+let activeSyncs = 0;
+
+function updateSyncStatus(status) {
+    const statusEl = document.getElementById('db-sync-status');
+    if (!statusEl) return;
+    
+    if (status === 'saving') {
+        statusEl.className = 'badge sync-badge-saving';
+        statusEl.innerHTML = '<i data-lucide="refresh-cw" class="animate-spin" style="width: 14px; height: 14px;"></i> Sincronizando...';
+    } else if (status === 'synced') {
+        statusEl.className = 'badge sync-badge-synced';
+        statusEl.innerHTML = '<i data-lucide="cloud" style="width: 14px; height: 14px;"></i> Sincronizado';
+    } else if (status === 'error') {
+        statusEl.className = 'badge sync-badge-error';
+        statusEl.innerHTML = '<i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Erro de Sinc.';
+    } else if (status === 'offline') {
+        statusEl.className = 'badge sync-badge-offline';
+        statusEl.innerHTML = '<i data-lucide="cloud-off" style="width: 14px; height: 14px;"></i> Modo Local';
     }
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+async function syncToFirebase(collection, data) {
+    if (!auth.currentUser) {
+        updateSyncStatus('offline');
+        return;
+    }
+    
+    if (syncTimeouts[collection]) {
+        clearTimeout(syncTimeouts[collection]);
+    }
+    
+    updateSyncStatus('saving');
+    
+    syncTimeouts[collection] = setTimeout(async () => {
+        activeSyncs++;
+        try {
+            await db.collection('eventMasterData').doc(collection).set({ items: data });
+            activeSyncs--;
+            if (activeSyncs === 0) {
+                updateSyncStatus('synced');
+            }
+        } catch (e) {
+            activeSyncs--;
+            console.error("Erro ao salvar na nuvem:", e);
+            updateSyncStatus('error');
+        }
+    }, 1000);
 }
 
 // Interceptar salvamentos locais para enviar para a nuvem
@@ -67,6 +112,7 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
         document.getElementById('login-container').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
+        updateSyncStatus('synced');
         
         try {
             // Load from Firebase
@@ -74,9 +120,38 @@ auth.onAuthStateChanged(async (user) => {
             const paDoc = await db.collection('eventMasterData').doc('participants').get();
             const exDoc = await db.collection('eventMasterData').doc('expenses').get();
             
-            if (evDoc.exists) events = evDoc.data().items || [];
-            if (paDoc.exists) participants = paDoc.data().items || [];
-            if (exDoc.exists) expenses = exDoc.data().items || [];
+            let hasDataInCloud = false;
+            
+            if (evDoc.exists) {
+                events = evDoc.data().items || [];
+                if (events.length > 0) hasDataInCloud = true;
+            }
+            if (paDoc.exists) {
+                participants = paDoc.data().items || [];
+                if (participants.length > 0) hasDataInCloud = true;
+            }
+            if (exDoc.exists) {
+                expenses = exDoc.data().items || [];
+                if (expenses.length > 0) hasDataInCloud = true;
+            }
+            
+            // Se a nuvem estiver vazia, mas tivermos dados locais, faz upload para o banco
+            if (!hasDataInCloud) {
+                const localEvents = JSON.parse(localStorage.getItem('event_master_events')) || [];
+                const localParticipants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
+                const localExpenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
+                
+                if (localEvents.length > 0 || localParticipants.length > 0 || localExpenses.length > 0) {
+                    events = localEvents;
+                    participants = localParticipants;
+                    expenses = localExpenses;
+                    
+                    await db.collection('eventMasterData').doc('events').set({ items: events });
+                    await db.collection('eventMasterData').doc('participants').set({ items: participants });
+                    await db.collection('eventMasterData').doc('expenses').set({ items: expenses });
+                    console.log("Dados locais sincronizados com sucesso para banco na nuvem vazio.");
+                }
+            }
             
             // Previne loop de salvamento ao carregar restaurando sem ativar o monkey patch
             originalSetItem('event_master_events', JSON.stringify(events));
@@ -85,6 +160,7 @@ auth.onAuthStateChanged(async (user) => {
             
         } catch (e) {
             console.error("Erro ao carregar da nuvem, usando cache local", e);
+            updateSyncStatus('error');
             events = JSON.parse(localStorage.getItem('event_master_events')) || [];
             participants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
             expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
@@ -106,6 +182,7 @@ auth.onAuthStateChanged(async (user) => {
     } else {
         document.getElementById('login-container').classList.remove('hidden');
         document.getElementById('app').classList.add('hidden');
+        updateSyncStatus('offline');
     }
 });
 
