@@ -570,83 +570,88 @@ function switchView(viewId) {
 // --- Lógica de Eventos e Despesas ---
 
 function saveEvent() {
-    const id = eventEditId.value;
-    const maxInstallments = parseInt(document.getElementById('event-max-installments').value) || 12;
+    try {
+        const id = eventEditId.value;
+        const maxInstallments = parseInt(document.getElementById('event-max-installments').value) || 12;
 
-    // Capture Schedule
-    const scheduleInputs = document.querySelectorAll('.event-schedule-input');
-    const installmentSchedule = {}; // Map number -> date string
-    scheduleInputs.forEach(input => {
-        if (input.dataset.number && input.value) {
-            installmentSchedule[input.dataset.number] = input.value;
-        }
-    });
+        // Capture Schedule
+        const scheduleInputs = document.querySelectorAll('.event-schedule-input');
+        const installmentSchedule = {}; // Map number -> date string
+        scheduleInputs.forEach(input => {
+            if (input.dataset.number && input.value) {
+                installmentSchedule[input.dataset.number] = input.value;
+            }
+        });
 
-    const eventData = {
-        name: document.getElementById('event-name').value,
-        date: document.getElementById('event-date').value,
-        location: document.getElementById('event-location').value,
-        defaultPrice: parseFloat(document.getElementById('event-price').value) || 0,
-        dueDay: parseInt(document.getElementById('event-due-day').value) || null,
-        maxInstallments: maxInstallments,
-        installmentSchedule: installmentSchedule
-    };
+        const eventData = {
+            name: document.getElementById('event-name').value,
+            date: document.getElementById('event-date').value,
+            location: document.getElementById('event-location').value,
+            defaultPrice: parseFloat(document.getElementById('event-price').value) || 0,
+            dueDay: parseInt(document.getElementById('event-due-day').value) || null,
+            maxInstallments: maxInstallments,
+            installmentSchedule: installmentSchedule
+        };
 
-    if (id && id !== 'undefined' && id !== 'null') {
-        events = events.map(e => e.id == id ? { ...e, ...eventData } : e);
+        if (id && id !== 'undefined' && id !== 'null') {
+            events = events.map(e => e.id == id ? { ...e, ...eventData } : e);
 
-        // Pergunta se atualiza participantes existentes
-        if (confirm("Deseja aplicar estas configurações (Valor e Calendário de Pagamento) aos participantes já cadastrados?\n\nIsso atualizará valores pendentes e datas de parcelas de acordo com a regra fixa ou dia de vencimento.")) {
-            participants = participants.map(p => {
-                if (p.eventId == id) {
-                    let updatedP = { ...p };
+            // Pergunta se atualiza participantes existentes
+            if (confirm("Deseja aplicar estas configurações (Valor e Calendário de Pagamento) aos participantes já cadastrados?\n\nIsso atualizará valores pendentes e datas de parcelas de acordo com a regra fixa ou dia de vencimento.")) {
+                participants = participants.map(p => {
+                    if (p.eventId == id) {
+                        let updatedP = { ...p };
 
-                    const isFullyPaid = updatedP.status === 'paid';
+                        const isFullyPaid = updatedP.status === 'paid';
 
-                    if (!isFullyPaid && eventData.defaultPrice > 0) {
-                        updatedP.price = eventData.defaultPrice;
-                    }
+                        if (!isFullyPaid && eventData.defaultPrice > 0) {
+                            updatedP.price = eventData.defaultPrice;
+                        }
 
-                    // 2. Atualizar Datas de Parcelas
-                    if (updatedP.paymentType === 'installments' && updatedP.installments) {
-                        updatedP.installments = updatedP.installments.map(inst => {
-                            if (inst.status === 'pending') {
-                                // Prioridade: Data Fixa Específica
-                                const fixedDate = eventData.installmentSchedule[inst.number];
-                                if (fixedDate) {
-                                    return { ...inst, dueDate: fixedDate };
+                        // 2. Atualizar Datas de Parcelas
+                        if (updatedP.paymentType === 'installments' && updatedP.installments) {
+                            updatedP.installments = updatedP.installments.map(inst => {
+                                if (inst.status === 'pending') {
+                                    // Prioridade: Data Fixa Específica
+                                    const fixedDate = eventData.installmentSchedule[inst.number];
+                                    if (fixedDate) {
+                                        return { ...inst, dueDate: fixedDate };
+                                    }
+
+                                    // Fallback: Dia Vencimento Genérico
+                                    if (eventData.dueDay) {
+                                        const currentDueDate = new Date(inst.dueDate);
+                                        currentDueDate.setDate(eventData.dueDay);
+                                        return { ...inst, dueDate: currentDueDate.toISOString().split('T')[0] };
+                                    }
                                 }
+                                return inst;
+                            });
+                        }
 
-                                // Fallback: Dia Vencimento Genérico
-                                if (eventData.dueDay) {
-                                    const currentDueDate = new Date(inst.dueDate);
-                                    currentDueDate.setDate(eventData.dueDay);
-                                    return { ...inst, dueDate: currentDueDate.toISOString().split('T')[0] };
-                                }
-                            }
-                            return inst;
-                        });
+                        return updatedP;
                     }
-
-                    return updatedP;
-                }
-                return p;
-            });
-            localStorage.setItem('event_master_participants', JSON.stringify(participants));
+                    return p;
+                });
+                localStorage.setItem('event_master_participants', JSON.stringify(participants));
+            }
+        } else {
+            const newEvent = { id: Date.now(), ...eventData };
+            events.push(newEvent);
+            if (!currentEventId) currentEventId = newEvent.id;
         }
-    } else {
-        const newEvent = { id: Date.now(), ...eventData };
-        events.push(newEvent);
-        if (!currentEventId) currentEventId = newEvent.id;
+
+        localStorage.setItem('event_master_events', JSON.stringify(events));
+        eventModalOverlay.classList.add('hidden');
+        eventForm.reset();
+        renderEvents();
+        updateUIContext();
+        lucide.createIcons();
+        triggerBackup();
+    } catch (error) {
+        console.error("Erro ao salvar evento:", error);
+        alert("Erro ao salvar o evento: " + error.message);
     }
-
-    localStorage.setItem('event_master_events', JSON.stringify(events));
-    eventModalOverlay.classList.add('hidden');
-    eventForm.reset();
-    renderEvents();
-    updateUIContext();
-    lucide.createIcons();
-    triggerBackup();
 }
 
 function renderEventScheduleInputs(existingSchedule = null) {
@@ -905,71 +910,76 @@ function renderExpenseInstallmentsList(existingData = null) {
 // --- Lógica de Participantes ---
 
 function saveParticipant() {
-    const id = participantEditId.value;
-    const paymentType = paymentTypeSelect.value;
-    const installmentsData = [];
+    try {
+        const id = participantEditId.value;
+        const paymentType = paymentTypeSelect.value;
+        const installmentsData = [];
 
-    // Coleta dados das parcelas se for parcelado
-    if (paymentType === 'installments') {
-        const installmentItems = document.querySelectorAll('#installments-list .installment-item');
-        installmentItems.forEach(item => {
-            installmentsData.push({
-                number: parseInt(item.dataset.number),
-                totalValue: parseFloat(item.querySelector('.inst-total').value) || 0,
-                paidValue: parseFloat(item.querySelector('.inst-paid').value) || 0,
-                dueDate: item.querySelector('.inst-due-date').value,
-                paymentDate: item.querySelector('.inst-date').value,
-                status: item.querySelector('.inst-status').checked ? 'paid' : 'pending'
+        // Coleta dados das parcelas se for parcelado
+        if (paymentType === 'installments') {
+            const installmentItems = document.querySelectorAll('#installments-list .installment-item');
+            installmentItems.forEach(item => {
+                installmentsData.push({
+                    number: parseInt(item.dataset.number),
+                    totalValue: parseFloat(item.querySelector('.inst-total').value) || 0,
+                    paidValue: parseFloat(item.querySelector('.inst-paid').value) || 0,
+                    dueDate: item.querySelector('.inst-due-date').value,
+                    paymentDate: item.querySelector('.inst-date').value,
+                    status: item.querySelector('.inst-status').checked ? 'paid' : 'pending'
+                });
             });
-        });
+        }
+
+        const price = parseFloat(document.getElementById('price').value) || 0;
+        let status = document.getElementById('status').value;
+        let paidAmount = 0;
+
+        if (paymentType === 'installments') {
+            paidAmount = installmentsData.reduce((acc, inst) => acc + inst.paidValue, 0);
+            status = installmentsData.every(i => i.status === 'paid') ? 'paid' : 'pending';
+        } else if (paymentType === 'partial') {
+            paidAmount = parseFloat(document.getElementById('partial-paid-amount').value) || 0;
+            status = paidAmount >= price && price > 0 ? 'paid' : 'pending';
+        } else {
+            paidAmount = status === 'paid' ? price : 0;
+        }
+
+        const participantData = {
+            eventId: parseInt(regEventSelect.value),
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            price: price,
+            paymentType: paymentType,
+            paymentDate: document.getElementById('payment-date').value,
+            paymentMethod: document.getElementById('payment-method').value,
+            obs: document.getElementById('payment-obs').value,
+            status: status,
+            confirmation: document.getElementById('confirmation').value,
+            installments: paymentType === 'installments' ? installmentsData : [],
+            paidAmount: paidAmount
+        };
+
+        if (id && id !== 'undefined' && id !== 'null') {
+            // Update
+            participants = participants.map(p => p.id == id ? { ...p, ...participantData, id: p.id } : p);
+        } else {
+            // Create
+            participants.push({ id: Date.now(), ...participantData });
+        }
+
+        localStorage.setItem('event_master_participants', JSON.stringify(participants));
+        modalOverlay.classList.add('hidden');
+        participantForm.reset();
+        renderParticipantList();
+        renderDashboard(); // Atualizar stats
+        updateUIContext();
+        lucide.createIcons();
+        triggerBackup();
+    } catch (error) {
+        console.error("Erro ao salvar participante:", error);
+        alert("Erro ao salvar o participante: " + error.message);
     }
-
-    const price = parseFloat(document.getElementById('price').value) || 0;
-    let status = document.getElementById('status').value;
-    let paidAmount = 0;
-
-    if (paymentType === 'installments') {
-        paidAmount = installmentsData.reduce((acc, inst) => acc + inst.paidValue, 0);
-        status = installmentsData.every(i => i.status === 'paid') ? 'paid' : 'pending';
-    } else if (paymentType === 'partial') {
-        paidAmount = parseFloat(document.getElementById('partial-paid-amount').value) || 0;
-        status = paidAmount >= price && price > 0 ? 'paid' : 'pending';
-    } else {
-        paidAmount = status === 'paid' ? price : 0;
-    }
-
-    const participantData = {
-        eventId: parseInt(regEventSelect.value),
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        price: price,
-        paymentType: paymentType,
-        paymentDate: document.getElementById('payment-date').value,
-        paymentMethod: document.getElementById('payment-method').value,
-        obs: document.getElementById('payment-obs').value,
-        status: status,
-        confirmation: document.getElementById('confirmation').value,
-        installments: paymentType === 'installments' ? installmentsData : [],
-        paidAmount: paidAmount
-    };
-
-    if (id && id !== 'undefined' && id !== 'null') {
-        // Update
-        participants = participants.map(p => p.id == id ? { ...p, ...participantData, id: p.id } : p);
-    } else {
-        // Create
-        participants.push({ id: Date.now(), ...participantData });
-    }
-
-    localStorage.setItem('event_master_participants', JSON.stringify(participants));
-    modalOverlay.classList.add('hidden');
-    participantForm.reset();
-    renderParticipantList();
-    renderDashboard(); // Atualizar stats
-    updateUIContext();
-    lucide.createIcons();
-    triggerBackup();
 }
 
 // Bulk Selection State
