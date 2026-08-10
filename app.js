@@ -993,7 +993,7 @@ function getFilteredParticipants() {
 
     return participants.filter(p => {
         const matchesEvent = currentEventId ? p.eventId == currentEventId : true;
-        const matchesSearch = p.name.toLowerCase().includes(filterText.toLowerCase()) ||
+        const matchesSearch = ((p.name || '').toLowerCase().includes(filterText.toLowerCase())) ||
             (p.email && p.email.toLowerCase().includes(filterText.toLowerCase()));
         const matchesStatus = statusFilter ? p.status === statusFilter : true;
         const matchesConf = confFilter ? (p.confirmation || 'later') === confFilter : true;
@@ -1027,11 +1027,11 @@ function renderParticipantList() {
             const totalInst = p.installments.length;
             paymentInfo = `<span class="badge" style="background:var(--bg-secondary)">${paidInst}/${totalInst} Parc.</span>`;
         } else if (p.paymentType === 'partial') {
-            const remaining = Math.max(0, p.price - (p.paidAmount || 0));
+            const remaining = Math.max(0, (p.price || 0) - (p.paidAmount || 0));
             paymentInfo = `
                 <div style="font-size: 0.85rem; line-height: 1.3;">
                     <span style="color: var(--primary); font-weight: 600;">R$ ${(p.paidAmount || 0).toFixed(2).replace('.', ',')}</span>
-                    <span style="color: var(--text-muted);">/ R$ ${p.price.toFixed(2).replace('.', ',')}</span>
+                    <span style="color: var(--text-muted);">/ R$ ${(p.price || 0).toFixed(2).replace('.', ',')}</span>
                     ${remaining > 0 ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 0.15rem; font-weight: 500;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>` : '<div style="font-size: 0.75rem; color: #34d399; margin-top: 0.15rem; font-weight: 500;">Quitado</div>'}
                 </div>
             `;
@@ -1076,7 +1076,7 @@ function renderParticipantList() {
                 </td>
                 <td>${phoneHtml}</td>
                 <td>${paymentInfo}</td>
-                <td>R$ ${p.price.toFixed(2).replace('.', ',')}</td>
+                <td>R$ ${(p.price || 0).toFixed(2).replace('.', ',')}</td>
                 <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
                 <td><span class="status-badge ${conf.class}">${conf.label}</span></td>
                 <td>
@@ -1243,9 +1243,9 @@ function renderDashboard() {
         recentTableBody.innerHTML = recent.map(p => `
             <tr>
                 <td>${p.id}</td> <!-- Usando ID como 'Protocolo' simplificado -->
-                <td>${p.name}</td>
+                <td>${p.name || 'Sem nome'}</td>
                 <td>${new Date(p.paymentDate || p.id).toLocaleDateString('pt-BR')}</td>
-                <td>R$ ${p.price.toFixed(2).replace('.', ',')}</td>
+                <td>R$ ${(p.price || 0).toFixed(2).replace('.', ',')}</td>
                 <td><span class="status-badge ${p.status === 'paid' ? 'status-paid' : 'status-pending'}">${p.status === 'paid' ? 'Pago' : 'Pendente'}</span></td>
             </tr>
         `).join('');
@@ -1984,15 +1984,15 @@ function generatePrintableReport() {
         html += `
             <tr>
                 <td>
-                    <strong>${p.name}</strong><br/>
+                    <strong>${p.name || 'Sem nome'}</strong><br/>
                     <small>${p.email || ''}</small><br/>
                     <small>${p.phone || ''}</small>
                 </td>
                 <td class="${statusClass}">${statusLabel}</td>
                 <td>${paymentInfo}</td>
                 <td>
-                    Prev: R$ ${p.price.toFixed(2)}<br/>
-                    Pago: R$ ${p.paidAmount.toFixed(2)}
+                    Prev: R$ ${(p.price || 0).toFixed(2)}<br/>
+                    Pago: R$ ${(p.paidAmount || 0).toFixed(2)}
                 </td>
                 <td>${installmentsHtml}</td>
             </tr>
@@ -2143,4 +2143,5 @@ function updateThemeIcon(theme) {
     }
 }
 
-init();
+// A inicialização é feita sob demanda pelo listener de autenticação
+// init();

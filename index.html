@@ -11,6 +11,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const banner = document.getElementById('global-error-banner');
+            const msgSpan = document.getElementById('global-error-message');
+            if (banner && msgSpan) {
+                const cleanSource = source ? source.substring(source.lastIndexOf('/') + 1) : 'app.js';
+                msgSpan.textContent = `${message} (${cleanSource}:${lineno}:${colno})`;
+                banner.classList.remove('hidden');
+            }
+            return false;
+        };
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            const banner = document.getElementById('global-error-banner');
+            const msgSpan = document.getElementById('global-error-message');
+            if (banner && msgSpan) {
+                msgSpan.textContent = `Erro Assíncrono: ${event.reason?.message || event.reason}`;
+                banner.classList.remove('hidden');
+            }
+        });
+    </script>
+    
     <!-- Firebase SDK (Compat Version for Vanilla JS) -->
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
@@ -18,6 +40,10 @@
 </head>
 
 <body>
+    <div id="global-error-banner" class="hidden" style="background-color: #fee2e2; color: #991b1b; padding: 1rem; font-weight: 500; text-align: center; border-bottom: 2px solid #f87171; position: fixed; top: 0; left: 0; right: 0; z-index: 9999; font-size: 0.95rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; gap: 1rem;">
+        <span>⚠️ <strong>Erro no Sistema:</strong> <span id="global-error-message"></span></span>
+        <button onclick="document.getElementById('global-error-banner').classList.add('hidden')" style="background: #991b1b; border: none; color: white; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600; font-size: 0.85rem;">Fechar</button>
+    </div>
     <!-- Login Screen -->
     <div id="login-container" class="login-overlay">
         <div class="login-card card">
