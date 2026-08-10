@@ -119,32 +119,74 @@ auth.onAuthStateChanged(async (user) => {
             const evDoc = await db.collection('eventMasterData').doc('events').get();
             const paDoc = await db.collection('eventMasterData').doc('participants').get();
             const exDoc = await db.collection('eventMasterData').doc('expenses').get();
-            
-            let hasDataInCloud = false;
+                      let hasDataInCloud = false;
             
             if (evDoc.exists) {
                 events = evDoc.data().items || [];
-                events = events.map((e, idx) => {
-                    if (e.id === undefined || e.id === null || e.id === 'undefined') e.id = Date.now() + idx;
-                    return e;
-                });
                 if (events.length > 0) hasDataInCloud = true;
             }
             if (paDoc.exists) {
                 participants = paDoc.data().items || [];
-                participants = participants.map((p, idx) => {
-                    if (p.id === undefined || p.id === null || p.id === 'undefined') p.id = Date.now() + idx + 1000;
-                    return p;
-                });
                 if (participants.length > 0) hasDataInCloud = true;
             }
             if (exDoc.exists) {
                 expenses = exDoc.data().items || [];
-                expenses = expenses.map((ex, idx) => {
-                    if (ex.id === undefined || ex.id === null || ex.id === 'undefined') ex.id = Date.now() + idx + 2000;
-                    return ex;
-                });
                 if (expenses.length > 0) hasDataInCloud = true;
+            }
+
+            // Realiza migração e auto-cura completa de IDs corrompidos / undefined
+            let needsDbUpdate = false;
+            events = events.map((e, idx) => {
+                if (e.id === undefined || e.id === null || e.id === 'undefined' || e.id === 'null') {
+                    const oldId = e.id;
+                    const newId = Date.now() + idx;
+                    e.id = newId;
+                    needsDbUpdate = true;
+                    
+                    // Atualiza participantes que estavam vinculados a esse ID corrompido
+                    participants = participants.map(p => {
+                        if (p.eventId === oldId || p.eventId === undefined || p.eventId === null || p.eventId === 'undefined' || p.eventId === 'null') {
+                            p.eventId = newId;
+                            needsDbUpdate = true;
+                        }
+                        return p;
+                    });
+                    
+                    // Atualiza despesas vinculadas
+                    expenses = expenses.map(ex => {
+                        if (ex.eventId === oldId || ex.eventId === undefined || ex.eventId === null || ex.eventId === 'undefined' || ex.eventId === 'null') {
+                            ex.eventId = newId;
+                            needsDbUpdate = true;
+                        }
+                        return ex;
+                    });
+                }
+                return e;
+            });
+
+            // Garante que participantes avulsos sem ID ou com ID corrompido também sejam curados
+            participants = participants.map((p, idx) => {
+                if (p.id === undefined || p.id === null || p.id === 'undefined' || p.id === 'null') {
+                    p.id = Date.now() + idx + 1000;
+                    needsDbUpdate = true;
+                }
+                return p;
+            });
+
+            // Garante que despesas avulsas sem ID ou com ID corrompido também sejam curados
+            expenses = expenses.map((ex, idx) => {
+                if (ex.id === undefined || ex.id === null || ex.id === 'undefined' || ex.id === 'null') {
+                    ex.id = Date.now() + idx + 2000;
+                    needsDbUpdate = true;
+                }
+                return ex;
+            });
+
+            if (needsDbUpdate && hasDataInCloud) {
+                await db.collection('eventMasterData').doc('events').set({ items: events });
+                await db.collection('eventMasterData').doc('participants').set({ items: participants });
+                await db.collection('eventMasterData').doc('expenses').set({ items: expenses });
+                console.log("Banco de dados na nuvem auto-curado de IDs corrompidos.");
             }
             
             // Se a nuvem estiver vazia, mas tivermos dados locais, faz upload para o banco
@@ -179,15 +221,33 @@ auth.onAuthStateChanged(async (user) => {
             
             // Auto-cura do cache local
             events = events.map((e, idx) => {
-                if (e.id === undefined || e.id === null || e.id === 'undefined') e.id = Date.now() + idx;
+                if (e.id === undefined || e.id === null || e.id === 'undefined' || e.id === 'null') {
+                    const oldId = e.id;
+                    const newId = Date.now() + idx;
+                    e.id = newId;
+                    participants = participants.map(p => {
+                        if (p.eventId === oldId || p.eventId === undefined || p.eventId === null || p.eventId === 'undefined' || p.eventId === 'null') {
+                            p.eventId = newId;
+                        }
+                        return p;
+                    });
+                    expenses = expenses.map(ex => {
+                        if (ex.eventId === oldId || ex.eventId === undefined || ex.eventId === null || ex.eventId === 'undefined' || ex.eventId === 'null') {
+                            ex.eventId = newId;
+                        }
+                        return ex;
+                    });
+                }
                 return e;
             });
+
             participants = participants.map((p, idx) => {
-                if (p.id === undefined || p.id === null || p.id === 'undefined') p.id = Date.now() + idx + 1000;
+                if (p.id === undefined || p.id === null || p.id === 'undefined' || p.id === 'null') p.id = Date.now() + idx + 1000;
                 return p;
             });
+
             expenses = expenses.map((ex, idx) => {
-                if (ex.id === undefined || ex.id === null || ex.id === 'undefined') ex.id = Date.now() + idx + 2000;
+                if (ex.id === undefined || ex.id === null || ex.id === 'undefined' || ex.id === 'null') ex.id = Date.now() + idx + 2000;
                 return ex;
             });
         }
