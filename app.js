@@ -124,14 +124,26 @@ auth.onAuthStateChanged(async (user) => {
             
             if (evDoc.exists) {
                 events = evDoc.data().items || [];
+                events = events.map((e, idx) => {
+                    if (e.id === undefined || e.id === null || e.id === 'undefined') e.id = Date.now() + idx;
+                    return e;
+                });
                 if (events.length > 0) hasDataInCloud = true;
             }
             if (paDoc.exists) {
                 participants = paDoc.data().items || [];
+                participants = participants.map((p, idx) => {
+                    if (p.id === undefined || p.id === null || p.id === 'undefined') p.id = Date.now() + idx + 1000;
+                    return p;
+                });
                 if (participants.length > 0) hasDataInCloud = true;
             }
             if (exDoc.exists) {
                 expenses = exDoc.data().items || [];
+                expenses = expenses.map((ex, idx) => {
+                    if (ex.id === undefined || ex.id === null || ex.id === 'undefined') ex.id = Date.now() + idx + 2000;
+                    return ex;
+                });
                 if (expenses.length > 0) hasDataInCloud = true;
             }
             
@@ -164,6 +176,20 @@ auth.onAuthStateChanged(async (user) => {
             events = JSON.parse(localStorage.getItem('event_master_events')) || [];
             participants = JSON.parse(localStorage.getItem('event_master_participants')) || [];
             expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
+            
+            // Auto-cura do cache local
+            events = events.map((e, idx) => {
+                if (e.id === undefined || e.id === null || e.id === 'undefined') e.id = Date.now() + idx;
+                return e;
+            });
+            participants = participants.map((p, idx) => {
+                if (p.id === undefined || p.id === null || p.id === 'undefined') p.id = Date.now() + idx + 1000;
+                return p;
+            });
+            expenses = expenses.map((ex, idx) => {
+                if (ex.id === undefined || ex.id === null || ex.id === 'undefined') ex.id = Date.now() + idx + 2000;
+                return ex;
+            });
         }
         
         const savedEventId = localStorage.getItem('event_master_current_id');
@@ -491,7 +517,7 @@ function saveEvent() {
         installmentSchedule: installmentSchedule
     };
 
-    if (id) {
+    if (id && id !== 'undefined' && id !== 'null') {
         events = events.map(e => e.id == id ? { ...e, ...eventData } : e);
 
         // Pergunta se atualiza participantes existentes
@@ -576,12 +602,12 @@ function renderEventScheduleInputs(existingSchedule = null) {
 
 function editEvent(id, event) {
     event.stopPropagation();
-    const eventToEdit = events.find(e => e.id === id);
+    const eventToEdit = events.find(e => e.id == id);
     if (!eventToEdit) return;
 
     eventModalTitle.textContent = 'Editar Evento';
     eventSubmitBtn.textContent = 'Salvar Alterações';
-    eventEditId.value = id;
+    eventEditId.value = id || '';
     document.getElementById('event-name').value = eventToEdit.name;
     document.getElementById('event-date').value = eventToEdit.date;
     document.getElementById('event-location').value = eventToEdit.location;
@@ -735,7 +761,7 @@ function saveExpense() {
             : (status === 'paid' ? amount : 0)
     };
 
-    if (id) {
+    if (id && id !== 'undefined' && id !== 'null') {
         expenses = expenses.map(e => e.id == id ? { ...e, ...expenseData } : e);
     } else {
         expenses.push({ id: Date.now(), ...expenseData });
@@ -841,7 +867,7 @@ function saveParticipant() {
             : (document.getElementById('status').value === 'paid' ? parseFloat(document.getElementById('price').value) : 0)
     };
 
-    if (id) {
+    if (id && id !== 'undefined' && id !== 'null') {
         // Update
         participants = participants.map(p => p.id == id ? { ...p, ...participantData, id: p.id } : p);
     } else {
@@ -1007,7 +1033,7 @@ function editParticipant(id) {
     if (!p) return;
 
     participantModalTitle.textContent = 'Editar Participante';
-    participantEditId.value = p.id;
+    participantEditId.value = p.id || '';
     populateEventSelect();
 
     // Preenche campos
