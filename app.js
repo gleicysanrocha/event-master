@@ -419,7 +419,7 @@ function setupEventListeners() {
 
 // Gerenciamento de Contexto
 function updateUIContext() {
-    const activeEvent = events.find(e => e.id === currentEventId);
+    const activeEvent = events.find(e => e.id == currentEventId);
     const pEventEl = document.getElementById('participant-event-name');
     if (activeEvent) {
         currentEventBadge.classList.remove('hidden');
@@ -432,7 +432,7 @@ function updateUIContext() {
 }
 
 function switchEvent(id) {
-    currentEventId = id;
+    currentEventId = parseInt(id) || id;
     localStorage.setItem('event_master_current_id', currentEventId);
     updateUIContext();
     renderEvents();
@@ -492,12 +492,12 @@ function saveEvent() {
     };
 
     if (id) {
-        events = events.map(e => e.id === parseInt(id) ? { ...e, ...eventData } : e);
+        events = events.map(e => e.id == id ? { ...e, ...eventData } : e);
 
         // Pergunta se atualiza participantes existentes
         if (confirm("Deseja aplicar estas configurações (Valor e Calendário de Pagamento) aos participantes já cadastrados?\n\nIsso atualizará valores pendentes e datas de parcelas de acordo com a regra fixa ou dia de vencimento.")) {
             participants = participants.map(p => {
-                if (p.eventId === parseInt(id)) {
+                if (p.eventId == id) {
                     let updatedP = { ...p };
 
                     const isFullyPaid = updatedP.status === 'paid';
@@ -598,11 +598,11 @@ function editEvent(id, event) {
 function deleteEvent(id, event) {
     event.stopPropagation();
     if (confirm('Tem certeza que deseja excluir este evento? Todos os participantes vinculados também serão removidos.')) {
-        events = events.filter(e => e.id !== id);
-        participants = participants.filter(p => p.eventId !== id);
-        expenses = expenses.filter(e => e.eventId !== id); // Remove despesas também
+        events = events.filter(e => e.id != id);
+        participants = participants.filter(p => p.eventId != id);
+        expenses = expenses.filter(e => e.eventId != id); // Remove despesas também
 
-        if (currentEventId === id) {
+        if (currentEventId == id) {
             currentEventId = events.length > 0 ? events[0].id : null;
             localStorage.setItem('event_master_current_id', currentEventId);
         }
@@ -622,12 +622,12 @@ function deleteEvent(id, event) {
 
 function renderEvents() {
     eventsListContainer.innerHTML = events.map(event => {
-        const eventParticipants = participants.filter(p => p.eventId === event.id);
+        const eventParticipants = participants.filter(p => p.eventId == event.id);
         const revenue = eventParticipants.reduce((sum, p) => sum + (p.status === 'paid' ? p.price : (p.paidAmount || 0)), 0);
 
-        const eventExpenses = expenses.filter(e => e.eventId === event.id);
+        const eventExpenses = expenses.filter(e => e.eventId == event.id);
         const totalExpenses = eventExpenses.reduce((sum, e) => sum + e.amount, 0); // Gastos Totais
-        const isActive = event.id === currentEventId;
+        const isActive = event.id == currentEventId;
 
         return `
             <div class="event-card ${isActive ? 'active' : ''}" onclick="switchEvent(${event.id})">
@@ -736,7 +736,7 @@ function saveExpense() {
     };
 
     if (id) {
-        expenses = expenses.map(e => e.id === parseInt(id) ? { ...e, ...expenseData } : e);
+        expenses = expenses.map(e => e.id == id ? { ...e, ...expenseData } : e);
     } else {
         expenses.push({ id: Date.now(), ...expenseData });
     }
@@ -843,7 +843,7 @@ function saveParticipant() {
 
     if (id) {
         // Update
-        participants = participants.map(p => p.id === parseInt(id) ? { ...p, ...participantData, id: parseInt(id) } : p);
+        participants = participants.map(p => p.id == id ? { ...p, ...participantData, id: p.id } : p);
     } else {
         // Create
         participants.push({ id: Date.now(), ...participantData });
@@ -869,7 +869,7 @@ function getFilteredParticipants() {
     const typeFilter = document.getElementById('filter-payment-type') ? document.getElementById('filter-payment-type').value : '';
 
     return participants.filter(p => {
-        const matchesEvent = currentEventId ? p.eventId === currentEventId : true;
+        const matchesEvent = currentEventId ? p.eventId == currentEventId : true;
         const matchesSearch = p.name.toLowerCase().includes(filterText.toLowerCase()) ||
             (p.email && p.email.toLowerCase().includes(filterText.toLowerCase()));
         const matchesStatus = statusFilter ? p.status === statusFilter : true;
@@ -928,9 +928,9 @@ function renderParticipantList() {
                 </td>
                 <td>
                     <div class="user-cell">
-                        <div class="avatar-sm">${p.name.charAt(0).toUpperCase()}</div>
+                        <div class="avatar-sm">${p.name ? p.name.charAt(0).toUpperCase() : ''}</div>
                         <div>
-                            <div class="font-medium">${p.name}</div>
+                            <div class="font-medium">${p.name || 'Sem nome'}</div>
                             ${emailHtml}
                         </div>
                     </div>
@@ -996,7 +996,7 @@ function renderParticipantList() {
 }
 
 function editParticipant(id) {
-    const p = participants.find(part => part.id === id);
+    const p = participants.find(part => part.id == id);
     if (!p) return;
 
     participantModalTitle.textContent = 'Editar Participante';
@@ -1029,7 +1029,7 @@ function editParticipant(id) {
 
 function deleteParticipant(id) {
     if (confirm('Tem certeza que deseja excluir este participante?')) {
-        participants = participants.filter(p => p.id !== id);
+        participants = participants.filter(p => p.id != id);
         localStorage.setItem('event_master_participants', JSON.stringify(participants));
         renderParticipantList();
         renderDashboard();
@@ -1039,7 +1039,7 @@ function deleteParticipant(id) {
 }
 
 function updateStatus(id, newStatus) {
-    participants = participants.map(p => p.id === id ? { ...p, status: newStatus } : p);
+    participants = participants.map(p => p.id == id ? { ...p, status: newStatus } : p);
     localStorage.setItem('event_master_participants', JSON.stringify(participants));
     renderParticipantList();
     renderDashboard();
@@ -1050,10 +1050,10 @@ function updateStatus(id, newStatus) {
 function renderDashboard() {
     // Filtra participantes e despesas do evento atual
     const contextParticipants = currentEventId
-        ? participants.filter(p => p.eventId === currentEventId)
+        ? participants.filter(p => p.eventId == currentEventId)
         : participants;
     const contextExpenses = currentEventId
-        ? expenses.filter(e => e.eventId === currentEventId)
+        ? expenses.filter(e => e.eventId == currentEventId)
         : expenses;
 
     const totalParticipants = contextParticipants.length;
@@ -1112,7 +1112,7 @@ function renderDashboard() {
 
 function renderReports() {
     const contextParticipants = currentEventId
-        ? participants.filter(p => p.eventId === currentEventId)
+        ? participants.filter(p => p.eventId == currentEventId)
         : participants;
 
     const totalProjected = contextParticipants.reduce((sum, p) => sum + p.price, 0);
@@ -1398,7 +1398,7 @@ function sendWhatsApp(participantId) {
 
 function exportParticipantsCSV() {
     const contextParticipants = currentEventId
-        ? participants.filter(p => p.eventId === currentEventId)
+        ? participants.filter(p => p.eventId == currentEventId)
         : participants;
 
     if (contextParticipants.length === 0) {
@@ -1462,7 +1462,7 @@ function exportParticipantsCSV() {
 
 function exportFinanceCSV() {
     const contextParticipants = currentEventId
-        ? participants.filter(p => p.eventId === currentEventId)
+        ? participants.filter(p => p.eventId == currentEventId)
         : participants;
 
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -1602,7 +1602,7 @@ function applyBulkEdit() {
     let eventSchedule = null;
 
     if (currentEventId) {
-        const evt = events.find(e => e.id === currentEventId);
+        const evt = events.find(e => e.id == currentEventId);
         if (evt) {
             eventDefaultPrice = evt.defaultPrice || 0;
             eventMaxInst = evt.maxInstallments || 1;
@@ -1730,10 +1730,10 @@ function generatePrintableReport() {
         return;
     }
 
-    const event = events.find(e => e.id === currentEventId);
+    const event = events.find(e => e.id == currentEventId);
     if (!event) return;
 
-    const reportParticipants = participants.filter(p => p.eventId === currentEventId);
+    const reportParticipants = participants.filter(p => p.eventId == currentEventId);
 
     // Calculate Totals
     const totalParticipants = reportParticipants.length;
