@@ -421,6 +421,13 @@ function setupEventListeners() {
         }
     });
 
+    const partialPaidInput = document.getElementById('partial-paid-amount');
+    if (partialPaidInput) {
+        partialPaidInput.addEventListener('input', () => {
+            updatePartialPaymentBalance();
+        });
+    }
+
     participantForm.addEventListener('submit', (e) => {
         e.preventDefault();
         saveParticipant();
