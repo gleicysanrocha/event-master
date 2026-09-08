@@ -1265,19 +1265,21 @@ function renderDashboard() {
         : expenses;
 
     const totalParticipants = contextParticipants.length;
-    // Receita Total (Entradas reais)
-    const totalReceived = contextParticipants.reduce((sum, p) => sum + (p.paidAmount || (p.status === 'paid' ? p.price : 0)), 0);
-    // Total Previsto (Soma dos preços dos participantes)
-    const totalProjected = contextParticipants.reduce((sum, p) => sum + p.price, 0);
-    // A Receber
-    const pendingRevenue = totalProjected - totalReceived;
+    // Receita Realizada (O que realmente entrou no caixa)
+    const totalReceived = contextParticipants.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
 
-    // Gastos Totais (Previsto)
-    const totalExpensesProjected = contextExpenses.reduce((sum, e) => sum + e.amount, 0);
-    // Gastos Pagos (Saídas reais)
+    // Receita Prevista (Soma de quem não recusou o convite)
+    const totalProjected = contextParticipants
+        .filter(p => p.confirmation !== 'no')
+        .reduce((sum, p) => sum + (p.price || 0), 0);
+
+    // A Receber (O que falta para atingir a meta dos confirmados/possíveis)
+    const pendingRevenue = Math.max(0, totalProjected - totalReceived);
+
+    // Gastos Totais (Realizados)
     const totalExpensesPaid = contextExpenses.reduce((sum, e) => sum + (e.paidAmount || 0), 0);
 
-    // Lucro Líquido = Receita Real - Gastos Reais (Caixa Atual)
+    // Lucro Líquido Atual (Caixa Real: Entradas Reais - Saídas Reais)
     const netProfit = totalReceived - totalExpensesPaid;
 
     const pendingCount = contextParticipants.filter(p => p.status === 'pending' || (p.installments && p.installments.some(i => i.status === 'pending'))).length;
@@ -1323,8 +1325,14 @@ function renderReports() {
         ? participants.filter(p => p.eventId == currentEventId)
         : participants;
 
-    const totalProjected = contextParticipants.reduce((sum, p) => sum + p.price, 0);
-    const totalReceived = contextParticipants.reduce((sum, p) => sum + (p.paidAmount || (p.status === 'paid' ? p.price : 0)), 0);
+    // Receita Realizada (Entradas reais)
+    const totalReceived = contextParticipants.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+
+    // Receita Prevista (Soma de quem não recusou o convite)
+    const totalProjected = contextParticipants
+        .filter(p => p.confirmation !== 'no')
+        .reduce((sum, p) => sum + (p.price || 0), 0);
+
     const avgTicket = contextParticipants.length ? (totalProjected / contextParticipants.length) : 0;
 
     document.getElementById('report-total-projected').textContent = `R$ ${totalProjected.toFixed(2).replace('.', ',')}`;
@@ -1351,8 +1359,7 @@ function renderReports() {
         `).join('');
     }
 
-    // Extrato Detalhado (Simplificado, mostra todas as entradas)
-    // Se fosse mais complexo, quebraria as parcelas pagas em linhas individuais
+    // Extrato Detalhado
     const extractTableBody = document.querySelector('#financial-extract-table tbody');
     if (extractTableBody) {
         let extractRows = [];
@@ -1380,7 +1387,6 @@ function renderReports() {
             }
         });
 
-        // Ordena por data (opcional, aqui sem date parsing robusto pode falhar ordenação correta)
         extractTableBody.innerHTML = extractRows.map(row => `
             <tr>
                 <td>${row.date}</td>
@@ -1955,9 +1961,11 @@ function generatePrintableReport() {
 
     // Calculate Totals
     const totalParticipants = reportParticipants.length;
-    const totalProjected = reportParticipants.reduce((sum, p) => sum + p.price, 0);
+    const totalProjected = reportParticipants
+        .filter(p => p.confirmation !== 'no')
+        .reduce((sum, p) => sum + (p.price || 0), 0);
     const totalPaid = reportParticipants.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-    const totalPending = totalProjected - totalPaid;
+    const totalPending = Math.max(0, totalProjected - totalPaid);
 
     let html = `
         <html>
