@@ -1072,101 +1072,60 @@ function renderParticipantList() {
         };
         const conf = confMap[p.confirmation || 'later'] || confMap['later'];
 
-        // Processar informações financeiras
+        // Processar informações financeiras com base na Confirmação
         let financeiroHtml = '';
         const totalPrice = p.price || 0;
         const paidAmount = p.paidAmount || 0;
         const remaining = Math.max(0, totalPrice - paidAmount);
+        const confirmation = p.confirmation || 'later';
 
-        if (p.paymentType === 'installments' && p.installments && p.installments.length > 0) {
-            const paidInstallments = p.installments.filter(i => i.status === 'paid').length;
-            const totalInstallments = p.installments.length;
-
-            if (paidAmount >= totalPrice && totalPrice > 0) {
-                // Pagamento total
+        if (confirmation === 'no') {
+            // Se a CONFIRMAÇÃO for "Não Vai" ou "Recusado"
+            financeiroHtml = `
+                <div style="text-align: center;">
+                    <span class="badge" style="background-color: #9ca3af; color: white; font-size: 0.8rem;">Isento</span>
+                </div>
+            `;
+        } else if (['maybe', 'later', 'pending'].includes(confirmation)) {
+            // Se a CONFIRMAÇÃO for "Talvez" ou "Confirmar Depois"
+            financeiroHtml = `
+                <div style="text-align: center;">
+                    <div style="font-size: 0.9rem; color: var(--text-main);">R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                    <span class="badge" style="background-color: #9ca3af; color: white; font-size: 0.8rem;">Aguardando Presença</span>
+                </div>
+            `;
+        } else if (confirmation === 'yes') {
+            // Se a CONFIRMAÇÃO for "Confirmado"
+            if (paidAmount === 0) {
+                // Sem pagamento (Pago == 0)
                 financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Pago: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago Integral</span>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.9rem; color: var(--text-main);">R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: #facc15; color: #854d0e; font-size: 0.8rem;">Pendente</span>
                     </div>
                 `;
-            } else if (paidAmount > 0) {
-                // Pagamento parcial
+            } else if (paidAmount > 0 && remaining > 0) {
+                // Pagamento Parcial (Pago > 0 e Falta > 0)
                 financeiroHtml = `
-                    <div>
+                    <div style="text-align: center;">
                         <div style="font-size: 0.9rem; color: var(--success); font-weight: 600;">Pago: R$ ${paidAmount.toFixed(2).replace('.', ',')}</div>
                         <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--info); color: white; font-size: 0.8rem;">Parcelado ${paidInstallments}/${totalInstallments}</span>
+                        <span class="badge" style="background-color: #3b82f6; color: white; font-size: 0.8rem;">Parcial</span>
+                    </div>
+                `;
+            } else if (remaining === 0) {
+                // Pagamento Total (Falta == 0)
+                financeiroHtml = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.9rem; color: var(--text-main);">R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago</span>
                     </div>
                 `;
             } else {
-                // Nenhum pagamento
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; color: var(--success);">Pago: R$ 0,00</div>
-                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--warning); color: white; font-size: 0.8rem;">Parcelado 0/${totalInstallments}</span>
-                    </div>
-                `;
-            }
-        } else if (p.paymentType === 'partial') {
-            // Pagamento livre/parcial
-            if (paidAmount >= totalPrice && totalPrice > 0) {
-                // Pagamento total
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Pago: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago Integral</span>
-                    </div>
-                `;
-            } else if (paidAmount > 0) {
-                // Pagamento parcial
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; color: var(--success); font-weight: 600;">Pago: R$ ${paidAmount.toFixed(2).replace('.', ',')}</div>
-                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--info); color: white; font-size: 0.8rem;">Parcial</span>
-                    </div>
-                `;
-            } else {
-                // Nenhum pagamento
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; color: var(--success);">Pago: R$ 0,00</div>
-                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--warning); color: white; font-size: 0.8rem;">Pendente</span>
-                    </div>
-                `;
+                financeiroHtml = `<div style="text-align: center;">R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>`;
             }
         } else {
-            // À vista
-            if (paidAmount >= totalPrice && totalPrice > 0) {
-                // Pagamento total
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Pago: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago Integral</span>
-                    </div>
-                `;
-            } else if (paidAmount > 0) {
-                // Pagamento parcial (para à vista, isso seria incomum, mas tratamos)
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; color: var(--success); font-weight: 600;">Pago: R$ ${paidAmount.toFixed(2).replace('.', ',')}</div>
-                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--info); color: white; font-size: 0.8rem;">Parcial</span>
-                    </div>
-                `;
-            } else {
-                // Nenhum pagamento
-                financeiroHtml = `
-                    <div>
-                        <div style="font-size: 0.9rem; color: var(--success);">Pago: R$ 0,00</div>
-                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
-                        <span class="badge" style="background-color: var(--warning); color: white; font-size: 0.8rem;">Pendente</span>
-                    </div>
-                `;
-            }
+            financeiroHtml = `<div style="text-align: center;">R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>`;
         }
 
         return `
