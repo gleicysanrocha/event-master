@@ -136,33 +136,42 @@ auth.onAuthStateChanged(async (user) => {
 
             // Realiza migração e auto-cura completa de IDs corrompidos / undefined
             let needsDbUpdate = false;
+
+            // 1. Build healing map for events
+            const idHealingMap = new Map();
             events = events.map((e, idx) => {
                 if (e.id === undefined || e.id === null || e.id === 'undefined' || e.id === 'null') {
-                    const oldId = e.id;
                     const newId = Date.now() + idx;
+                    idHealingMap.set(e.id, newId);
                     e.id = newId;
                     needsDbUpdate = true;
-                    
-                    // Atualiza participantes que estavam vinculados a esse ID corrompido
-                    participants = participants.map(p => {
-                        if (p.eventId === oldId || p.eventId === undefined || p.eventId === null || p.eventId === 'undefined' || p.eventId === 'null') {
-                            p.eventId = newId;
-                            needsDbUpdate = true;
-                        }
-                        return p;
-                    });
-                    
-                    // Atualiza despesas vinculadas
-                    expenses = expenses.map(ex => {
-                        if (ex.eventId === oldId || ex.eventId === undefined || ex.eventId === null || ex.eventId === 'undefined' || ex.eventId === 'null') {
-                            ex.eventId = newId;
-                            needsDbUpdate = true;
-                        }
-                        return ex;
-                    });
                 }
                 return e;
             });
+
+            // 2. Apply mapping to participants
+            if (idHealingMap.size > 0) {
+                participants = participants.map(p => {
+                    const healedId = idHealingMap.get(p.eventId);
+                    if (healedId !== undefined) {
+                        p.eventId = healedId;
+                        needsDbUpdate = true;
+                    }
+                    return p;
+                });
+            }
+
+            // 3. Apply mapping to expenses
+            if (idHealingMap.size > 0) {
+                expenses = expenses.map(ex => {
+                    const healedId = idHealingMap.get(ex.eventId);
+                    if (healedId !== undefined) {
+                        ex.eventId = healedId;
+                        needsDbUpdate = true;
+                    }
+                    return ex;
+                });
+            }
 
             // Garante que participantes avulsos sem ID ou com ID corrompido também sejam curados
             participants = participants.map((p, idx) => {
@@ -220,26 +229,43 @@ auth.onAuthStateChanged(async (user) => {
             expenses = JSON.parse(localStorage.getItem('event_master_expenses')) || [];
             
             // Auto-cura do cache local
+            let needsDbUpdate = false;
+
+            // 1. Build healing map for events
+            const idHealingMap = new Map();
             events = events.map((e, idx) => {
                 if (e.id === undefined || e.id === null || e.id === 'undefined' || e.id === 'null') {
-                    const oldId = e.id;
                     const newId = Date.now() + idx;
+                    idHealingMap.set(e.id, newId);
                     e.id = newId;
-                    participants = participants.map(p => {
-                        if (p.eventId === oldId || p.eventId === undefined || p.eventId === null || p.eventId === 'undefined' || p.eventId === 'null') {
-                            p.eventId = newId;
-                        }
-                        return p;
-                    });
-                    expenses = expenses.map(ex => {
-                        if (ex.eventId === oldId || ex.eventId === undefined || ex.eventId === null || ex.eventId === 'undefined' || ex.eventId === 'null') {
-                            ex.eventId = newId;
-                        }
-                        return ex;
-                    });
+                    needsDbUpdate = true;
                 }
                 return e;
             });
+
+            // 2. Apply mapping to participants
+            if (idHealingMap.size > 0) {
+                participants = participants.map(p => {
+                    const healedId = idHealingMap.get(p.eventId);
+                    if (healedId !== undefined) {
+                        p.eventId = healedId;
+                        needsDbUpdate = true;
+                    }
+                    return p;
+                });
+            }
+
+            // 3. Apply mapping to expenses
+            if (idHealingMap.size > 0) {
+                expenses = expenses.map(ex => {
+                    const healedId = idHealingMap.get(ex.eventId);
+                    if (healedId !== undefined) {
+                        ex.eventId = healedId;
+                        needsDbUpdate = true;
+                    }
+                    return ex;
+                });
+            }
 
             participants = participants.map((p, idx) => {
                 if (p.id === undefined || p.id === null || p.id === 'undefined' || p.id === 'null') p.id = Date.now() + idx + 1000;
@@ -645,8 +671,9 @@ function saveEvent() {
         } else {
             const newEvent = { id: Date.now(), ...eventData };
             events.push(newEvent);
-            if (!currentEventId) currentEventId = newEvent.id;
+            currentEventId = newEvent.id; // Novo evento torna-se o ativo automaticamente
         }
+
 
         localStorage.setItem('event_master_events', JSON.stringify(events));
         eventModalOverlay.classList.add('hidden');
