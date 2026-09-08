@@ -1060,48 +1060,114 @@ function renderParticipantList() {
     if (countTotalEl) countTotalEl.textContent = total;
 
     tbody.innerHTML = filtered.map(p => {
-        const statusClass = p.status === 'paid' ? 'status-paid' : 'status-pending';
-        const statusLabel = p.status === 'paid' ? 'Pago' : 'Pendente';
-        let paymentInfo = '';
         const isSelected = selectedParticipantIds.has(p.id) ? 'checked' : '';
 
-        if (p.paymentType === 'installments' && p.installments) {
-            const paidInst = p.installments.filter(i => i.status === 'paid').length;
-            const totalInst = p.installments.length;
-            paymentInfo = `<span class="badge" style="background:var(--bg-secondary)">${paidInst}/${totalInst} Parc.</span>`;
-        } else if (p.paymentType === 'partial') {
-            const remaining = Math.max(0, (p.price || 0) - (p.paidAmount || 0));
-            paymentInfo = `
-                <div style="font-size: 0.85rem; line-height: 1.3;">
-                    <span style="color: var(--primary); font-weight: 600;">R$ ${(p.paidAmount || 0).toFixed(2).replace('.', ',')}</span>
-                    <span style="color: var(--text-muted);">/ R$ ${(p.price || 0).toFixed(2).replace('.', ',')}</span>
-                    ${remaining > 0 ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 0.15rem; font-weight: 500;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>` : '<div style="font-size: 0.75rem; color: #34d399; margin-top: 0.15rem; font-weight: 500;">Quitado</div>'}
-                </div>
-            `;
-        } else {
-            paymentInfo = p.paymentMethod || '-';
-        }
-
+        // Processar confirmação (RSVP)
         const confMap = {
-            'yes': { label: 'Sim', class: 'status-paid' },
-            'no': { label: 'Não', class: 'status-error' },
+            'yes': { label: 'Confirmado', class: 'status-paid' },
+            'no': { label: 'Não Vai', class: 'status-error' },
             'maybe': { label: 'Talvez', class: 'status-pending' },
             'pending': { label: 'Pendente', class: 'status-secondary' },
             'later': { label: 'Confirmar Depois', class: 'status-secondary' }
         };
         const conf = confMap[p.confirmation || 'later'] || confMap['later'];
 
-        const emailHtml = p.email 
-            ? `<div class="text-sm text-muted flex-align-center" style="margin-top: 0.15rem;">
-                <i data-lucide="mail" class="contact-icon-inline"></i>${p.email}
-               </div>` 
-            : `<div class="text-sm empty-field">Sem e-mail</div>`;
+        // Processar informações financeiras
+        let financeiroHtml = '';
+        const totalPrice = p.price || 0;
+        const paidAmount = p.paidAmount || 0;
+        const remaining = Math.max(0, totalPrice - paidAmount);
 
-        const phoneHtml = p.phone 
-            ? `<span class="contact-item">
-                <i data-lucide="phone" class="contact-icon"></i>${p.phone}
-               </span>` 
-            : `<span class="empty-field">Sem telefone</span>`;
+        if (p.paymentType === 'installments' && p.installments && p.installments.length > 0) {
+            const paidInstallments = p.installments.filter(i => i.status === 'paid').length;
+            const totalInstallments = p.installments.length;
+
+            if (paidAmount >= totalPrice && totalPrice > 0) {
+                // Pagamento total
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Pago: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago Integral</span>
+                    </div>
+                `;
+            } else if (paidAmount > 0) {
+                // Pagamento parcial
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; color: var(--success); font-weight: 600;">Pago: R$ ${paidAmount.toFixed(2).replace('.', ',')}</div>
+                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--info); color: white; font-size: 0.8rem;">Parcelado ${paidInstallments}/${totalInstallments}</span>
+                    </div>
+                `;
+            } else {
+                // Nenhum pagamento
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; color: var(--success);">Pago: R$ 0,00</div>
+                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--warning); color: white; font-size: 0.8rem;">Parcelado 0/${totalInstallments}</span>
+                    </div>
+                `;
+            }
+        } else if (p.paymentType === 'partial') {
+            // Pagamento livre/parcial
+            if (paidAmount >= totalPrice && totalPrice > 0) {
+                // Pagamento total
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Pago: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago Integral</span>
+                    </div>
+                `;
+            } else if (paidAmount > 0) {
+                // Pagamento parcial
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; color: var(--success); font-weight: 600;">Pago: R$ ${paidAmount.toFixed(2).replace('.', ',')}</div>
+                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--info); color: white; font-size: 0.8rem;">Parcial</span>
+                    </div>
+                `;
+            } else {
+                // Nenhum pagamento
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; color: var(--success);">Pago: R$ 0,00</div>
+                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--warning); color: white; font-size: 0.8rem;">Pendente</span>
+                    </div>
+                `;
+            }
+        } else {
+            // À vista
+            if (paidAmount >= totalPrice && totalPrice > 0) {
+                // Pagamento total
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Pago: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--success); color: white; font-size: 0.8rem;">Pago Integral</span>
+                    </div>
+                `;
+            } else if (paidAmount > 0) {
+                // Pagamento parcial (para à vista, isso seria incomum, mas tratamos)
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; color: var(--success); font-weight: 600;">Pago: R$ ${paidAmount.toFixed(2).replace('.', ',')}</div>
+                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${remaining.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--info); color: white; font-size: 0.8rem;">Parcial</span>
+                    </div>
+                `;
+            } else {
+                // Nenhum pagamento
+                financeiroHtml = `
+                    <div>
+                        <div style="font-size: 0.9rem; color: var(--success);">Pago: R$ 0,00</div>
+                        <div style="font-size: 0.9rem; color: var(--error); font-weight: 600;">Falta: R$ ${totalPrice.toFixed(2).replace('.', ',')}</div>
+                        <span class="badge" style="background-color: var(--warning); color: white; font-size: 0.8rem;">Pendente</span>
+                    </div>
+                `;
+            }
+        }
 
         return `
             <tr class="${isSelected ? 'selected-row' : ''}">
@@ -1109,19 +1175,17 @@ function renderParticipantList() {
                     <input type="checkbox" class="participant-select-check" data-id="${p.id}" ${isSelected}>
                 </td>
                 <td>
-                    <div class="user-cell">
+                    <div class="participant-info">
                         <div class="avatar-sm">${p.name ? p.name.charAt(0).toUpperCase() : ''}</div>
-                        <div>
-                            <div class="font-medium">${p.name || 'Sem nome'}</div>
-                            ${emailHtml}
-                        </div>
+                        <div class="font-medium">${p.name || 'Sem nome'}</div>
                     </div>
                 </td>
-                <td>${phoneHtml}</td>
-                <td>${paymentInfo}</td>
-                <td>R$ ${(p.price || 0).toFixed(2).replace('.', ',')}</td>
-                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-                <td><span class="status-badge ${conf.class}">${conf.label}</span></td>
+                <td>
+                    <span class="status-badge ${conf.class}" style="font-size: 0.85rem;">${conf.label}</span>
+                </td>
+                <td>
+                    ${financeiroHtml}
+                </td>
                 <td>
                     <div class="action-buttons">
                         <button class="icon-btn" onclick="editParticipant('${p.id}')" title="Editar">
