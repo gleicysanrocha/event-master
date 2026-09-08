@@ -944,6 +944,15 @@ function renderExpenseInstallmentsList(existingData = null) {
 // --- Lógica de Participantes ---
 
 function saveParticipant() {
+    // Validar nome obrigatório
+    const nameInput = document.getElementById('name');
+    const name = nameInput.value.trim();
+    if (!name) {
+        alert("O nome do participante é obrigatório.");
+        nameInput.focus();
+        return;
+    }
+
     try {
         const id = participantEditId.value;
         const paymentType = paymentTypeSelect.value;
