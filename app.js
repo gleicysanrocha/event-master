@@ -1268,9 +1268,9 @@ function renderDashboard() {
     // Receita Realizada (O que realmente entrou no caixa)
     const totalReceived = contextParticipants.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
 
-    // Receita Prevista (Soma de quem não recusou o convite)
+    // Receita Prevista (Soma apenas de quem confirmou presença - 'sim')
     const totalProjected = contextParticipants
-        .filter(p => p.confirmation !== 'no')
+        .filter(p => p.confirmation === 'yes')
         .reduce((sum, p) => sum + (p.price || 0), 0);
 
     // A Receber (O que falta para atingir a meta dos confirmados/possíveis)
@@ -1328,9 +1328,9 @@ function renderReports() {
     // Receita Realizada (Entradas reais)
     const totalReceived = contextParticipants.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
 
-    // Receita Prevista (Soma de quem não recusou o convite)
+    // Receita Prevista (Soma apenas de quem confirmou presença - 'sim')
     const totalProjected = contextParticipants
-        .filter(p => p.confirmation !== 'no')
+        .filter(p => p.confirmation === 'yes')
         .reduce((sum, p) => sum + (p.price || 0), 0);
 
     const avgTicket = contextParticipants.length ? (totalProjected / contextParticipants.length) : 0;
@@ -1962,7 +1962,7 @@ function generatePrintableReport() {
     // Calculate Totals
     const totalParticipants = reportParticipants.length;
     const totalProjected = reportParticipants
-        .filter(p => p.confirmation !== 'no')
+        .filter(p => p.confirmation === 'yes')
         .reduce((sum, p) => sum + (p.price || 0), 0);
     const totalPaid = reportParticipants.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
     const totalPending = Math.max(0, totalProjected - totalPaid);
